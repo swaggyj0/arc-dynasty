@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ARC Dynasty — Trade Vote Feed</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05101a;font-family:'Segoe UI',system-ui,sans-serif;color:#d0e4f8;min-height:100vh}
+button,input{font-family:inherit;cursor:pointer}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#07111c}
+::-webkit-scrollbar-thumb{background:#1e3050;border-radius:2px}
+#header{background:rgba(5,16,26,0.97);border-bottom:1px solid rgba(56,98,168,0.15);
+  padding:0 24px;display:flex;align-items:center;justify-content:space-between;
+  height:54px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#2563eb,#7c3aed);
+  border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff}
+.logo-text{font-size:16px;font-weight:800;letter-spacing:-0.025em;color:#e2eaf8}
+.logo-text span{color:#3b82f6}
+.beta{font-size:9px;font-family:monospace;letter-spacing:0.1em;color:#2563eb;
+  background:rgba(37,99,235,0.12);padding:2px 7px;border-radius:3px}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-btn{background:none;border:1px solid transparent;border-radius:6px;
+  padding:5px 12px;color:#475569;font-size:13px;font-weight:500;transition:color 0.14s}
+.nav-btn.active{background:rgba(37,99,235,0.12);border-color:rgba(37,99,235,0.25);color:#93c5fd}
+.nav-btn:hover{color:#93c5fd}
+.nav-divider{width:1px;height:20px;background:rgba(56,98,168,0.2);margin:0 4px}
+#connect-btn{background:#1d4ed8;border:none;border-radius:7px;padding:7px 14px;
+  color:#fff;font-size:12px;font-weight:600;transition:opacity 0.14s}
+#connect-btn:hover{opacity:0.88}
+#connected-badge{display:none;font-size:11px;color:#22c55e;font-family:monospace;
+  background:rgba(34,197,94,0.08);padding:4px 9px;border-radius:6px;
+  border:1px solid rgba(34,197,94,0.2)}
+#stats-bar{background:rgba(8,18,35,0.7);border-bottom:1px solid rgba(56,98,168,0.07);
+  padding:10px 24px;display:flex;overflow-x:auto;gap:0}
+.stat{padding:0 22px;flex-shrink:0}
+.stat+.stat{border-left:1px solid rgba(56,98,168,0.1)}
+.stat-label{font-size:9px;color:#4a6a8a;font-family:monospace;letter-spacing:0.1em;margin-bottom:2px}
+.stat-val{font-size:17px;font-weight:700;color:#dbeafe;font-family:monospace}
+#main{max-width:760px;margin:0 auto;padding:28px 16px}
+.feed-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.feed-title{font-size:20px;font-weight:800;color:#e2eaf8;letter-spacing:-0.02em}
+.feed-sub{font-size:12px;color:#64748b;margin-top:3px}
+#submit-open-btn{background:rgba(56,98,168,0.08);border:1px solid rgba(56,98,168,0.22);
+  border-radius:8px;padding:8px 14px;color:#7cb3e0;font-size:12px;font-weight:600}
+#submit-open-btn:hover{background:rgba(56,98,168,0.15)}
+#filter-bar{display:flex;gap:8px;align-items:center;margin-bottom:20px}
+.filt-btn{background:transparent;border:1px solid rgba(56,98,168,0.15);border-radius:6px;
+  padding:6px 13px;color:#475569;font-size:12px;font-weight:600;transition:all 0.14s}
+.filt-btn.active{background:rgba(29,78,216,0.14);border-color:rgba(29,78,216,0.38);color:#93c5fd}
+#trade-count{margin-left:auto;font-size:10px;color:#4a6a8a;font-family:monospace}
+#nudge{background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.13);
+  border-radius:10px;padding:13px 16px;margin-bottom:20px;
+  display:flex;justify-content:space-between;align-items:center;gap:12px}
+.nudge-text{font-size:12px;color:#64748b}
+.nudge-text strong{color:#93c5fd;font-weight:600}
+#nudge-btn{background:rgba(37,99,235,0.18);border:1px solid rgba(37,99,235,0.28);
+  border-radius:6px;padding:6px 12px;color:#93c5fd;font-size:12px;font-weight:600;flex-shrink:0}
+#feed{display:flex;flex-direction:column;gap:16px}
+.feed-footer{margin-top:36px;text-align:center;font-size:11px;color:#1a2d48;line-height:1.7}
+.feed-loading{text-align:center;padding:48px 20px}
+.feed-spinner{width:32px;height:32px;margin:0 auto 14px;border:3px solid rgba(56,98,168,0.15);
+  border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite}
+.feed-loading-text{font-size:13px;color:#64748b;font-family:monospace}
+.feed-error{text-align:center;padding:48px 20px}
+.feed-error-icon{font-size:32px;margin-bottom:12px}
+.feed-error-title{font-size:14px;color:#ef4444;font-weight:600;margin-bottom:6px}
+.feed-error-sub{font-size:12px;color:#64748b;line-height:1.6}
+.trade-card{background:linear-gradient(160deg,#0e2240 0%,#091828 55%,#07131f 100%);
+  border:1px solid rgba(56,98,168,0.2);border-radius:14px;padding:20px;
+  animation:fadeUp 0.45s ease both;box-shadow:0 2px 28px rgba(0,0,0,0.3)}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.card-badges{display:flex;gap:7px;align-items:center}
+.src-badge{font-size:9.5px;font-weight:700;letter-spacing:0.1em;font-family:monospace;padding:3px 8px;border-radius:4px}
+.rcvd-badge{font-size:9px;letter-spacing:0.08em;font-family:monospace;color:#a78bfa;
+  background:rgba(167,139,250,0.08);padding:3px 7px;border-radius:4px}
+.corpus-wrap{display:flex;align-items:center;gap:6px}
+.corpus-label{font-size:10px;color:#4a6a8a;font-family:monospace;letter-spacing:0.06em}
+.corpus-pct{font-size:12px;font-weight:700;font-family:monospace}
+.trade-grid{display:grid;grid-template-columns:1fr 120px 1fr;gap:12px;align-items:start;margin-bottom:16px}
+.side-label{font-size:9px;letter-spacing:0.12em;color:#4a6a8a;margin-bottom:8px;font-family:monospace}
+.assets{display:flex;flex-direction:column;gap:6px}
+.asset-tag{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.035);
+  border:1px solid rgba(255,255,255,0.05);border-radius:6px;padding:6px 10px}
+.pos-pill{font-size:8.5px;font-weight:700;letter-spacing:0.1em;padding:2px 5px;
+  border-radius:3px;font-family:monospace;flex-shrink:0}
+.asset-name{font-size:13px;color:#dbeafe;font-weight:600;flex:1}
+.asset-val{font-size:11px;color:#64748b;font-family:monospace}
+.gauge-wrap{display:flex;justify-content:center;padding-top:14px}
+.gauge-label{font-size:9px;color:#64748b;letter-spacing:0.1em;font-family:monospace;text-align:center;margin-top:2px}
+.zone-banner{border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;border:1px solid}
+.zone-icon{font-size:16px;line-height:1;flex-shrink:0}
+.zone-label{font-size:11px;font-weight:700;letter-spacing:0.04em}
+.zone-corpus{font-size:11px;color:#475569;margin-left:8px}
+.narrative{margin-bottom:16px}
+.nar-bullet{font-size:12px;color:#7c9cbf;padding:4px 0 4px 10px;
+  border-left:2px solid rgba(56,98,168,0.3);margin-bottom:4px}
+.nar-more{background:none;border:none;color:#64748b;font-size:10.5px;
+  padding:2px 0;font-family:monospace;letter-spacing:0.04em}
+.vote-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.vote-btn{border-radius:8px;padding:10px 4px;font-size:11px;font-weight:700;
+  letter-spacing:0.1em;border:1px solid;font-family:monospace;transition:all 0.14s}
+.vote-result{display:flex;align-items:center;justify-content:center;padding:10px;
+  border-radius:8px;border:1px solid;animation:fadeUp 0.3s ease}
+.vote-result-text{font-size:11px;font-weight:700;font-family:monospace;letter-spacing:0.1em}
+.vote-saving{font-size:10px;color:#64748b;font-family:monospace;text-align:center;margin-top:5px}
+.vote-reveal{margin-top:14px;animation:fadeUp 0.5s ease}
+.vote-bar-track{height:5px;border-radius:3px;overflow:hidden;display:flex;gap:2px;margin-bottom:7px}
+.vote-bar-seg{transition:width 0.7s ease;height:100%}
+.vote-stats{display:flex;justify-content:space-between;font-size:11px;font-family:monospace;margin-bottom:4px}
+.vote-total{text-align:center;font-size:10px;color:#4a6a8a}
+.card-footer{margin-top:10px;text-align:center;font-size:9.5px;color:#1a2d48;letter-spacing:0.03em}
+.submit-link{background:none;border:none;color:#4a6a8a;font-size:11px;
+  font-family:monospace;text-decoration:underline;text-underline-offset:3px;margin-top:8px}
+.overlay{position:fixed;inset:0;background:rgba(2,8,18,0.88);
+  display:flex;align-items:center;justify-content:center;z-index:300}
+.modal{background:#0d1f35;border:1px solid rgba(56,98,168,0.35);
+  border-radius:16px;padding:28px;width:440px;max-width:92vw;animation:slideUp 0.22s ease}
+.modal-header{display:flex;justify-content:space-between;margin-bottom:22px}
+.modal-title{font-size:17px;font-weight:800;color:#e2eaf8}
+.modal-sub{font-size:12px;color:#475569;margin-top:3px}
+.modal-close{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+  border-radius:8px;width:32px;height:32px;color:#64748b;font-size:16px;flex-shrink:0}
+.modal-close:hover{color:#94a3b8}
+.field-label{font-size:10px;color:#475569;letter-spacing:0.1em;font-family:monospace;margin-bottom:7px}
+.input-row{display:flex;gap:8px;margin-bottom:16px}
+#sleeper-input{flex:1;background:#091624;border:1px solid rgba(56,98,168,0.3);
+  border-radius:8px;padding:10px 13px;color:#e2eaf8;font-size:14px;outline:none}
+#sleeper-input:focus{border-color:rgba(59,130,246,0.5)}
+.search-btn{background:#1d4ed8;border:none;border-radius:8px;padding:10px 18px;
+  color:#fff;font-weight:700;font-size:13px}
+.info-box{border-radius:8px;padding:11px 13px;font-size:12px;line-height:1.6}
+.info-blue{background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.18);color:#818cf8}
+.info-amber{background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);color:#d97706;font-size:11px}
+.loading-wrap{text-align:center;padding:36px 0}
+.spinner{width:32px;height:32px;margin:0 auto 14px;border:3px solid rgba(56,98,168,0.15);
+  border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite}
+.loading-text{font-size:13px;color:#475569;font-family:monospace}
+.leagues-label{font-size:10px;color:#64748b;font-family:monospace;letter-spacing:0.08em;margin-bottom:12px}
+.league-row{background:rgba(255,255,255,0.025);border:1px solid rgba(56,98,168,0.18);
+  border-radius:8px;padding:12px 14px;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center}
+.league-name{font-size:14px;color:#dbeafe;font-weight:600}
+.league-meta{font-size:11px;color:#475569;margin-top:2px}
+.league-badge{font-size:9px;font-weight:700;letter-spacing:0.08em;font-family:monospace;padding:3px 7px;border-radius:4px}
+.connect-all-btn{width:100%;background:#1d4ed8;border:none;border-radius:8px;
+  padding:13px;color:#fff;font-weight:700;font-size:14px;margin-top:8px}
+.done-wrap{text-align:center;padding:28px 0}
+.done-icon{font-size:36px;color:#22c55e;margin-bottom:12px}
+.done-title{font-size:16px;font-weight:700;color:#22c55e}
+.done-sub{font-size:13px;color:#64748b;margin-top:8px;line-height:1.6}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.role-btn{background:rgba(255,255,255,0.025);border-radius:10px;padding:14px;text-align:left;border:1px solid}
+.role-btn:hover{background:rgba(255,255,255,0.04)}
+.role-btn-label{font-size:13px;font-weight:700;margin-bottom:5px}
+.role-btn-desc{font-size:11px;color:#475569}
+.got-it-btn{background:#1d4ed8;border:none;border-radius:8px;padding:10px 24px;
+  color:#fff;font-weight:700;font-size:13px;margin-top:16px}
+.submit-placeholder{text-align:center;padding:16px 0}
+.submit-icon{font-size:36px;color:#3b82f6;margin-bottom:12px}
+.submit-text{font-size:13px;color:#7c9cbf;line-height:1.6}
+.submit-text strong{color:#93c5fd}
+</style>
+</head>
+<body>
+
+<header id="header">
+  <div class="logo">
+    <div class="logo-icon">⇄</div>
+    <span class="logo-text">ARC <span>Dynasty</span></span>
+    <span class="beta">BETA</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="window.location='index.html'">Home</button>
+    <button class="nav-btn active">Vote</button>
+    <button class="nav-btn" onclick="window.location='dynastyiq-analyze.html'">Analyze</button>
+    <button class="nav-btn" onclick="window.location='dynastyiq-faq.html'">FAQ</button>
+    <button class="nav-btn" onclick="window.location='dynastyiq-leaderboard.html'">Leaderboard</button>
+    <div class="nav-divider"></div>
+    <button id="connect-btn" onclick="openSleeper()">Connect Sleeper</button>
+    <span id="connected-badge"></span>
+  </div>
+</header>
+
+<div id="stats-bar">
+  <div class="stat"><div class="stat-label">TRADES REVIEWED</div><div class="stat-val" id="stat-trades">—</div></div>
+  <div class="stat"><div class="stat-label">COMMUNITY VOTES</div><div class="stat-val" id="stat-votes">—</div></div>
+  <div class="stat"><div class="stat-label">ACCEPTED CORPUS</div><div class="stat-val">2,142</div></div>
+  <div class="stat"><div class="stat-label">MODEL ACCURACY</div><div class="stat-val">66%</div></div>
+  <div class="stat"><div class="stat-label">ACTIVE VOTERS</div><div class="stat-val" id="stat-voters">—</div></div>
+</div>
+
+<div id="main">
+  <div class="feed-header">
+    <div>
+      <div class="feed-title">Trade Review Feed</div>
+      <div class="feed-sub">Vote on real dynasty trades to train the acceptance model</div>
+    </div>
+    <button id="submit-open-btn" onclick="openSubmit()">+ Submit Trade</button>
+  </div>
+
+  <div id="filter-bar">
+    <button class="filt-btn active" onclick="setFilter('all',this)">All Trades</button>
+    <button class="filt-btn" onclick="setFilter('borderline',this)">Borderline (35–65%)</button>
+    <button class="filt-btn" onclick="setFilter('unresolved',this)">Needs Votes</button>
+    <button class="filt-btn" id="hide-voted-btn" onclick="toggleHideVoted(this)" style="margin-left:8px;color:#a5b4fc;border-color:rgba(99,102,241,0.4);background:rgba(99,102,241,0.15)">Show Voted</button>
+    <button class="filt-btn" id="my-submissions-btn" onclick="setFilter('my_submissions',this)"
+      style="margin-left:4px;color:#c084fc;border-color:rgba(192,132,252,0.4);background:rgba(192,132,252,0.08)"
+      onmouseover="this.style.background='rgba(192,132,252,0.15)'"
+      onmouseout="if(!this.classList.contains('active'))this.style.background='rgba(192,132,252,0.08)'">
+      My Submissions <span id="my-submissions-count" style="display:none;margin-left:4px;
+        background:rgba(192,132,252,0.2);border-radius:10px;padding:1px 6px;font-size:10px">0</span>
+    </button>
+    <span id="trade-count"></span>
+  </div>
+
+  <div id="nudge">
+    <div class="nudge-text">
+      <strong>Boost your vote weight —</strong>
+      connect a Sleeper account to count more toward trade outcomes
+    </div>
+    <button id="nudge-btn" onclick="openSleeper()">Connect →</button>
+  </div>
+
+  <div id="feed"></div>
+
+  <div class="feed-footer">
+    ARC Dynasty community votes train acceptance probability models.<br>
+    Votes weighted by Sleeper connection status and historical consistency score.
+  </div>
+</div>
+
+<div id="sleeper-overlay" class="overlay" style="display:none" onclick="overlayClick(event,'sleeper-overlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Connect Sleeper</div>
+        <div class="modal-sub">Link leagues · boost vote weight · contribute trade data</div>
+      </div>
+      <button class="modal-close" onclick="closeSleeper()">✕</button>
+    </div>
+    <div id="sleeper-body"></div>
+  </div>
+</div>
+
+<div id="submit-overlay" class="overlay" style="display:none" onclick="overlayClick(event,'submit-overlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Submit a Trade for Review</div>
+        <div class="modal-sub">Help the community evaluate real offers</div>
+      </div>
+      <button class="modal-close" onclick="closeSubmit()">✕</button>
+    </div>
+    <div id="submit-body"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// !! STEP 1: PASTE YOUR VERCEL URL HERE (keep the /api at the end)
+// Example: "https://dynastyiq-abc123.vercel.app/api"
+// While testing locally before Vercel is set up, leave it as "" and the page
+// will fall back to the built-in demo trades automatically.
+// ─────────────────────────────────────────────────────────────────────────────
+const API_BASE = "https://arc-two-mu.vercel.app/api";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FALLBACK TRADES — shown when API is unavailable or API_BASE is empty
+// ─────────────────────────────────────────────────────────────────────────────
+const FALLBACK_TRADES = [
+  {
+    id:"fallback-1",
+    sending:[{name:"CeeDee Lamb",pos:"WR",value:9400},{name:"2027 1st Mid",pos:"PICK",value:5615}],
+    receiving:[{name:"Ja'Marr Chase",pos:"WR",value:9200},{name:"Jayden Daniels",pos:"QB",value:8100}],
+    model:{prob:48,zone:"POSSIBLE",corpusPct:62,corpusLabel:"Common trade type",
+      narrative:["Near-even exchange — receiver advantage 1.02×","QB depth addition increases deal complexity","Chase trending down 90d; Lamb stable"]},
+    source:"corpus", votes:{accept:24,reject:18,counter:31},
+  },
+  {
+    id:"fallback-2",
+    sending:[{name:"Justin Jefferson",pos:"WR",value:7500},{name:"2027 1st Mid",pos:"PICK",value:5615}],
+    receiving:[{name:"CeeDee Lamb",pos:"WR",value:9400},{name:"Bijan Robinson",pos:"RB",value:7100}],
+    model:{prob:74,zone:"LIKELY",corpusPct:78,corpusLabel:"Frequently accepted",
+      narrative:["Receiver advantage 1.47× — clear value lean toward acceptance","Elite WR + premium young RB creates strong floor"]},
+    source:"sleeper", votes:{accept:52,reject:11,counter:18},
+  },
+  {
+    id:"fallback-3",
+    sending:[{name:"Travis Etienne",pos:"RB",value:5300},{name:"2026 1st Mid",pos:"PICK",value:4200}],
+    receiving:[{name:"Amon-Ra St. Brown",pos:"WR",value:8200}],
+    model:{prob:22,zone:"LOW",corpusPct:18,corpusLabel:"Rarely accepted",
+      narrative:["Significant value deficit — receiver advantage 0.83×","⚠️ Stud-for-scrubs: single elite WR rarely moves at this deficit"]},
+    source:"submitted",submittedAs:"sent", votes:{accept:5,reject:61,counter:14},
+  },
+  {
+    id:"fallback-4",
+    sending:[{name:"Breece Hall",pos:"RB",value:7200},{name:"Garrett Wilson",pos:"WR",value:7900},{name:"2026 1st Early",pos:"PICK",value:6200}],
+    receiving:[{name:"Josh Allen",pos:"QB",value:9999},{name:"James Cook",pos:"RB",value:5900}],
+    model:{prob:61,zone:"POSSIBLE",corpusPct:55,corpusLabel:"Mixed historical outcomes",
+      narrative:["Receiver advantage 1.21×","Josh Allen's ceiling justifies premium in superflex","3-piece haul with early 1st carries real negotiating weight"]},
+    source:"submitted",submittedAs:"received", votes:{accept:28,reject:19,counter:34},
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────────────────────
+const POS_CLR = {QB:"#818cf8",WR:"#34d399",RB:"#fb923c",TE:"#f472b6",PICK:"#94a3b8"};
+const ZONES   = {
+  LOW:    {label:"Low Probability",icon:"↓",bg:"#1a0505",border:"#7f1d1d",clr:"#ef4444"},
+  POSSIBLE:{label:"Possible",icon:"≈",bg:"#1c1004",border:"#78350f",clr:"#f59e0b"},
+  LIKELY: {label:"Likely",icon:"↑",bg:"#052e16",border:"#166534",clr:"#22c55e"},
+  STRONG: {label:"Strong Accept",icon:"✓",bg:"#042f2e",border:"#134e4a",clr:"#10b981"},
+};
+const SRC_META = {
+  corpus:   {text:"CORPUS",       clr:"#6366f1"},
+  sleeper:  {text:"SLEEPER LIVE", clr:"#0ea5e9"},
+  submitted:{text:"SUBMITTED",    clr:"#a855f7"},
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEVICE ID — persists across page refreshes so votes aren't double-counted
+// ─────────────────────────────────────────────────────────────────────────────
+function getDeviceId() {
+  let id = localStorage.getItem('diq_device_id');
+  if (!id) {
+    // Generate a random unique ID for this browser
+    id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+    localStorage.setItem('diq_device_id', id);
+  }
+  return id;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let TRADES        = [];           // filled by loadTrades()
+let hideVoted     = true;          // hide already-voted trades by default
+let currentFilter = "all";
+let isConnected   = false;
+let sleeperUser   = null;
+// Persist vote state across page loads — keyed by trade ID in localStorage.
+// This means if you leave the page and come back, trades you voted on still
+// show the voted state and can't be voted on again from the same device.
+function _loadVotedState() {
+  try {
+    const raw = localStorage.getItem('diq_votes');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    // Prune entries older than 60 days to keep localStorage tidy.
+    // Format: {id: "accept"} or {id: {vote:"accept", ts:timestamp}}
+    // Support both formats for backwards compat.
+    const now = Date.now();
+    const pruned = {};
+    for (const [id, val] of Object.entries(parsed)) {
+      if (typeof val === 'object' && val.ts) {
+        if (now - val.ts < 60 * 24 * 60 * 60 * 1000) pruned[id] = val.vote;
+      } else {
+        pruned[id] = val; // legacy format — keep without expiry
+      }
+    }
+    return pruned;
+  } catch { return {}; }
+}
+function _saveVotedState(v) {
+  try {
+    // Store with timestamp for future pruning
+    const withTs = {};
+    const now = Date.now();
+    for (const [id, vote] of Object.entries(v)) {
+      withTs[id] = typeof vote === 'string' ? {vote, ts: now} : vote;
+    }
+    localStorage.setItem('diq_votes', JSON.stringify(withTs));
+  } catch {}
+}
+const voted = _loadVotedState();   // trade id → "accept"|"reject"|"counter"
+const expanded      = {};         // trade id → bool
+const voteWeights   = {};         // trade id → {accept, reject, counter, total} from server
+const mySubmissions = new Set();  // trade ids submitted by this device — cannot vote on these
+
+// Queue system — load 25 trades upfront, show VISIBLE_COUNT at a time.
+// When a card is voted off, the next from queue slides in automatically.
+const VISIBLE_COUNT = 5;          // cards shown at once in unvoted feed
+let tradeQueue      = [];         // unvoted trades not yet shown
+let currentPage     = 1;         // for load-more pagination
+let totalTrades     = 0;          // total available from API
+let loadingMore     = false;      // prevent double-fetch
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOAD TRADES FROM API (with fallback to demo data)
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadTrades() {
+  if (!API_BASE) {
+    TRADES = FALLBACK_TRADES;
+    tradeQueue = [];
+    renderFeed();
+    return;
+  }
+
+  document.getElementById('feed').innerHTML = `
+    <div class="feed-loading">
+      <div class="feed-spinner"></div>
+      <div class="feed-loading-text">Loading trades…</div>
+    </div>`;
+
+  currentPage = 1;
+  TRADES = [];
+  tradeQueue = [];
+  await _fetchPage(1, true);
+  loadStats();
+}
+
+async function loadMoreTrades() {
+  if(loadingMore) return;
+  loadingMore = true;
+  currentPage++;
+  await _fetchPage(currentPage, false);
+  loadingMore = false;
+}
+
+async function _fetchPage(page, isFirst) {
+  try {
+    const deviceId = getDeviceId();
+    const url = `${API_BASE}/trades?filter=${currentFilter}&per_page=25&page=${page}&device_id=${deviceId}`;
+    const r   = await fetch(url);
+    if (!r.ok) throw new Error('API error ' + r.status);
+    const data = await r.json();
+
+    totalTrades = data.total || 0;
+    const newTrades = (data.trades || []).map(dbTradeToLocal);
+
+    // Mark votes and submissions
+    const userVotes = data.user_votes || {};
+    Object.entries(userVotes).forEach(([tradeId, v]) => { voted[tradeId] = v; });
+    const userSubmissions = data.user_submissions || [];
+    userSubmissions.forEach(id => mySubmissions.add(id));
+    _updateSubmissionsCount();
+    (data.trades || []).forEach(db => {
+      if(userVotes[db.id] || voted[db.id]) {
+        const total = (db.w_accept||0) + (db.w_reject||0) + (db.w_counter||0);
+        voteWeights[db.id] = {
+          accept:  db.w_accept  || 0,
+          reject:  db.w_reject  || 0,
+          counter: db.w_counter || 0,
+          total:   db.vote_count || Math.round(total),
+        };
+      }
+    });
+
+    if(isFirst) {
+      // Split into visible and queued — skip already-voted/submitted for active queue
+      const unvoted = newTrades
+        .filter(t => !voted[t.id] && !mySubmissions.has(t.id))
+        .sort((a, b) => {
+          // Sort by total votes descending — trades with more votes have momentum
+          // and benefit most from additional votes right now
+          const aVotes = (a.votes.accept||0) + (a.votes.reject||0) + (a.votes.counter||0);
+          const bVotes = (b.votes.accept||0) + (b.votes.reject||0) + (b.votes.counter||0);
+          return bVotes - aVotes;
+        });
+      const preVoted = newTrades.filter(t => voted[t.id] || mySubmissions.has(t.id));
+      TRADES = [...unvoted.slice(0, VISIBLE_COUNT), ...preVoted];
+      tradeQueue = unvoted.slice(VISIBLE_COUNT);
+      renderFeed();
+    } else {
+      // Append new unvoted trades to queue, voted ones to TRADES for show-voted view
+      const unvoted = newTrades.filter(t => !voted[t.id] && !mySubmissions.has(t.id));
+      const preVoted = newTrades.filter(t => voted[t.id] || mySubmissions.has(t.id));
+      // Re-sort entire queue by vote count after appending
+      tradeQueue.push(...unvoted);
+      tradeQueue.sort((a, b) => {
+        const aVotes = (a.votes.accept||0) + (a.votes.reject||0) + (a.votes.counter||0);
+        const bVotes = (b.votes.accept||0) + (b.votes.reject||0) + (b.votes.counter||0);
+        return bVotes - aVotes;
+      });
+      TRADES.push(...preVoted);
+      _updateLoadMoreBtn();
+    }
+  } catch (err) {
+    console.warn('API unavailable, using demo trades:', err.message);
+    TRADES = FALLBACK_TRADES;
+    tradeQueue = [];
+    renderFeed();
+  }
+}
+
+// Convert a Supabase trades row to the local format the card renderer expects
+function dbTradeToLocal(db) {
+  const narrative = Array.isArray(db.narrative_json) ? db.narrative_json : [];
+  return {
+    id:          db.id,
+    sending:     assetsFromNames(db.sending   || [], db.send_profiles),
+    receiving:   assetsFromNames(db.receiving || [], db.recv_profiles),
+    model: {
+      prob:        db.model_prob        || 50,
+      zone:        dbZone(db.model_zone || db.model_verdict),
+      corpusPct:   db.corpus_pct        || null,
+      corpusLabel: corpusLabel(db.corpus_pct),
+      narrative:   narrative.map(b =>
+        typeof b === 'string' ? b : (b.text || '')
+      ),
+    },
+    source:       db.source      || 'corpus',
+    submittedAs:  db.submitted_as || null,
+    votes: {
+      accept:  Math.round(db.w_accept  || 0),
+      reject:  Math.round(db.w_reject  || 0),
+      counter: Math.round(db.w_counter || 0),
+    },
+  };
+}
+
+// Map asset name strings to {name, pos, value} objects.
+// If a profiles array from stored trade data is available, use those values
+// (preserved from analyze time). Otherwise fall back to the KTC snapshot.
+function assetsFromNames(names, profiles) {
+  if(profiles && profiles.length) {
+    return names.map(n => {
+      const p = profiles.find(x => x.name === n);
+      return {
+        name:  n,
+        pos:   p?.pos || getPos(n),
+        value: p?.ktc || KTC_SNAP[n] || 0,
+      };
+    });
+  }
+  return names.map(n => ({name:n, pos:getPos(n), value:KTC_SNAP[n]||0}));
+}
+function getPos(n) {
+  if(/^\d{4}/.test(n)) return "PICK";
+  return POS_MAP[n] || "WR";
+}
+function dbZone(str) {
+  if(!str) return "POSSIBLE";
+  const s = str.toUpperCase();
+  if(s.includes("STRONG") || s.includes("STRONG DEAL")) return "STRONG";
+  if(s.includes("LIKELY"))   return "LIKELY";
+  if(s.includes("LOW") || s.includes("TOO FAR") || s.includes("LONG SHOT")) return "LOW";
+  return "POSSIBLE";
+}
+function corpusLabel(pct) {
+  if(pct==null) return "No corpus data";
+  if(pct>=70)   return "Frequently accepted";
+  if(pct>=45)   return "Common trade type";
+  if(pct>=25)   return "Mixed historical outcomes";
+  return "Rarely accepted";
+}
+
+// Load live stats from the health endpoint
+async function loadStats() {
+  if (!API_BASE) return;
+  try {
+    const r = await fetch(`${API_BASE}/health`);
+    const d = await r.json();
+    if(d.stats) {
+      const el = id => document.getElementById(id);
+      if(d.stats.trades)  el('stat-trades').textContent = Number(d.stats.trades).toLocaleString();
+      if(d.stats.votes)   el('stat-votes').textContent  = Number(d.stats.votes).toLocaleString();
+    }
+  } catch {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MINIMAL KTC SNAPSHOT (for asset value display)
+// ─────────────────────────────────────────────────────────────────────────────
+const KTC_SNAP = {
+  // QBs
+  "Josh Allen":9999,"Lamar Jackson":9650,"Jalen Hurts":8900,"Patrick Mahomes":8700,
+  "Caleb Williams":8200,"Jayden Daniels":8100,"CJ Stroud":7900,"Joe Burrow":7800,
+  "Drake Maye":7400,"Brock Purdy":7100,"Jordan Love":7000,"Trevor Lawrence":6800,
+  "Anthony Richardson":6500,"Bo Nix":6200,"Dak Prescott":5800,"Bryce Young":5500,
+  "Tua Tagovailoa":5600,"Sam Darnold":5200,"Justin Fields":4800,"Kirk Cousins":3200,
+  "Michael Penix Jr.":5000,"Will Levis":4500,"Malik Willis":3800,"Jaxson Dart":5200,
+  "Kyler Murray":5400,"Jalen Milroe":4200,
+  // RBs
+  "Breece Hall":7200,"Bijan Robinson":7100,"Jahmyr Gibbs":7000,"De'Von Achane":6900,
+  "Kyren Williams":6100,"James Cook":5900,"Christian McCaffrey":5900,"Jonathan Taylor":6000,
+  "Travis Etienne":5300,"Tyjae Spears":5000,"Josh Jacobs":4800,"D'Andre Swift":4800,
+  "Isiah Pacheco":5400,"MarShawn Lloyd":5300,"Saquon Barkley":5700,"Derrick Henry":4100,
+  "Tank Bigsby":5200,"Zach Charbonnet":5100,"Blake Corum":4700,"Rhamondre Stevenson":4600,
+  "Tony Pollard":4200,"David Montgomery":4200,"Roschon Johnson":4400,"Brian Robinson Jr.":4000,
+  "Rachaad White":4100,"Joe Mixon":3800,"Alvin Kamara":3500,"Aaron Jones":3200,
+  "Kaleb Johnson":5800,"Ashton Jeanty":5600,"Omarion Hampton":5400,"RJ Harvey":5000,
+  "Quinshon Judkins":4800,"Dylan Sampson":4200,"Cam Skattebo":4000,"LeQuint Allen":3800,
+  "Jaylen Wright":4000,"Kenneth Walker III":4800,"Chuba Hubbard":4200,
+  // WRs
+  "CeeDee Lamb":9400,"Ja'Marr Chase":9200,"Amon-Ra St. Brown":8200,"Garrett Wilson":7900,
+  "Malik Nabers":7800,"Justin Jefferson":7500,"Marvin Harrison Jr.":7200,"Drake London":7200,
+  "Brian Thomas Jr.":7200,"Rashee Rice":7000,"Puka Nacua":6900,"Rome Odunze":6800,
+  "Chris Olave":6700,"Zay Flowers":6600,"Tyreek Hill":6400,"Xavier Worthy":6500,
+  "Jaylen Waddle":6400,"Josh Downs":6300,"Keon Coleman":6100,"Tank Dell":6000,
+  "Jordan Addison":5900,"Tee Higgins":5800,"DeVonta Smith":5700,"DJ Moore":5500,
+  "Michael Pittman Jr.":5000,"DK Metcalf":5000,"Khalil Shakir":4800,"Deebo Samuel":4100,
+  "Courtland Sutton":3900,"Calvin Ridley":3800,"Mike Evans":3600,"Cooper Kupp":3600,
+  "Davante Adams":3200,"Darnell Mooney":2800,"Stefon Diggs":2600,"Diontae Johnson":2200,
+  "Ladd McConkey":6200,"Tetairoa McMillan":5800,"Emeka Egbuka":5200,
+  "Luther Burden III":5000,"Matthew Golden":4800,"Tre Harris":4200,
+  "Adonai Mitchell":5500,"Jaxon Smith-Njigba":6000,"A.J. Brown":6200,
+  "Justin Jefferson":7500,"Rashod Bateman":3000,"Jayden Reed":4500,
+  // TEs
+  "Brock Bowers":8200,"Trey McBride":6800,"Sam LaPorta":5200,"Tucker Kraft":5000,
+  "TJ Hockenson":4800,"T.J. Hockenson":4800,
+  "Mark Andrews":5000,"Travis Kelce":4800,"Jake Ferguson":5200,"George Kittle":4600,
+  "Isaiah Likely":5000,"Cole Kmet":4200,"Dalton Kincaid":4200,"Evan Engram":4000,
+  "Pat Freiermuth":4000,"Cade Otton":3800,"Jelani Woods":3500,"Brenton Strange":3200,
+  "Colston Loveland":5500,"Tyler Warren":5200,"Oronde Gadsden II":4800,
+  // Picks
+  "2026 1st Early":6200,"2026 1st Mid":4200,"2026 1st Late":3000,
+  "2026 2nd Early":4100,"2026 2nd Mid":3100,"2026 2nd Late":2400,
+  "2026 3rd Early":2300,"2026 3rd Mid":1900,"2026 3rd Late":1500,
+  "2026 4th Early":1400,"2026 4th Mid":1100,"2026 4th Late":800,
+  "2027 1st Early":6200,"2027 1st Mid":5615,"2027 1st Late":4400,
+  "2027 2nd Early":4200,"2027 2nd Mid":3448,"2027 2nd Late":2700,
+  "2027 3rd Early":2100,"2027 3rd Mid":1800,"2027 3rd Late":1400,
+  "2028 1st Early":5200,"2028 1st Mid":4100,"2028 1st Late":3000,
+  "2028 2nd Early":3200,"2028 2nd Mid":2600,"2028 2nd Late":2000,
+  "2026 Pick 1.01":6800,"2026 Pick 1.02":6600,"2026 Pick 1.03":6400,
+  "2026 Pick 1.04":6200,"2026 Pick 1.05":6000,"2026 Pick 1.06":5800,
+  "2026 Pick 1.07":5200,"2026 Pick 1.08":4800,"2026 Pick 1.09":4400,
+  "2026 Pick 1.10":4000,"2026 Pick 1.11":3600,"2026 Pick 1.12":3200,
+};
+const POS_MAP = {
+  "Josh Allen":"QB","Lamar Jackson":"QB","Jalen Hurts":"QB","Patrick Mahomes":"QB",
+  "Caleb Williams":"QB","Jayden Daniels":"QB","CJ Stroud":"QB","Joe Burrow":"QB",
+  "Drake Maye":"QB","Brock Purdy":"QB","Jordan Love":"QB","Trevor Lawrence":"QB",
+  "Anthony Richardson":"QB","Bo Nix":"QB","Dak Prescott":"QB","Bryce Young":"QB",
+  "Tua Tagovailoa":"QB","Sam Darnold":"QB","Justin Fields":"QB","Kirk Cousins":"QB",
+  "Michael Penix Jr.":"QB","Will Levis":"QB","Malik Willis":"QB","Jaxson Dart":"QB",
+  "Kyler Murray":"QB","Jalen Milroe":"QB",
+  "Breece Hall":"RB","Bijan Robinson":"RB","Jahmyr Gibbs":"RB","De'Von Achane":"RB",
+  "Kyren Williams":"RB","James Cook":"RB","Christian McCaffrey":"RB","Jonathan Taylor":"RB",
+  "Travis Etienne":"RB","Tyjae Spears":"RB","Josh Jacobs":"RB","D'Andre Swift":"RB",
+  "Isiah Pacheco":"RB","MarShawn Lloyd":"RB","Saquon Barkley":"RB","Derrick Henry":"RB",
+  "Tank Bigsby":"RB","Zach Charbonnet":"RB","Blake Corum":"RB","Rhamondre Stevenson":"RB",
+  "Tony Pollard":"RB","David Montgomery":"RB","Roschon Johnson":"RB","Brian Robinson Jr.":"RB",
+  "Rachaad White":"RB","Joe Mixon":"RB","Alvin Kamara":"RB","Aaron Jones":"RB",
+  "Kaleb Johnson":"RB","Ashton Jeanty":"RB","Omarion Hampton":"RB","RJ Harvey":"RB",
+  "Quinshon Judkins":"RB","Dylan Sampson":"RB","Cam Skattebo":"RB","LeQuint Allen":"RB",
+  "Jaylen Wright":"RB","Kenneth Walker III":"RB","Chuba Hubbard":"RB",
+  "CeeDee Lamb":"WR","Ja'Marr Chase":"WR","Amon-Ra St. Brown":"WR","Garrett Wilson":"WR",
+  "Malik Nabers":"WR","Justin Jefferson":"WR","Marvin Harrison Jr.":"WR","Drake London":"WR",
+  "Brian Thomas Jr.":"WR","Rashee Rice":"WR","Puka Nacua":"WR","Rome Odunze":"WR",
+  "Chris Olave":"WR","Zay Flowers":"WR","Tyreek Hill":"WR","Xavier Worthy":"WR",
+  "Jaylen Waddle":"WR","Josh Downs":"WR","Keon Coleman":"WR","Tank Dell":"WR",
+  "Jordan Addison":"WR","Tee Higgins":"WR","DeVonta Smith":"WR","DJ Moore":"WR",
+  "Michael Pittman Jr.":"WR","DK Metcalf":"WR","Khalil Shakir":"WR","Deebo Samuel":"WR",
+  "Courtland Sutton":"WR","Calvin Ridley":"WR","Mike Evans":"WR","Cooper Kupp":"WR",
+  "Davante Adams":"WR","Darnell Mooney":"WR","Stefon Diggs":"WR","Diontae Johnson":"WR",
+  "Ladd McConkey":"WR","Tetairoa McMillan":"WR","Emeka Egbuka":"WR",
+  "Luther Burden III":"WR","Matthew Golden":"WR","Tre Harris":"WR",
+  "Adonai Mitchell":"WR","Jaxon Smith-Njigba":"WR","A.J. Brown":"WR","Rashod Bateman":"WR",
+  "Jayden Reed":"WR",
+  "Brock Bowers":"TE","Trey McBride":"TE","Sam LaPorta":"TE","Tucker Kraft":"TE",
+  "TJ Hockenson":"TE","T.J. Hockenson":"TE",
+  "Mark Andrews":"TE","Travis Kelce":"TE","Jake Ferguson":"TE","George Kittle":"TE",
+  "Isaiah Likely":"TE","Cole Kmet":"TE","Dalton Kincaid":"TE","Evan Engram":"TE",
+  "Pat Freiermuth":"TE","Cade Otton":"TE","Jelani Woods":"TE","Brenton Strange":"TE",
+  "Colston Loveland":"TE","Tyler Warren":"TE","Oronde Gadsden II":"TE",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAUGE SVG
+// ─────────────────────────────────────────────────────────────────────────────
+function gaugeHTML(prob) {
+  const angle = -135 + (prob/100)*270;
+  const clr   = prob>=70?"#22c55e":prob>=50?"#f59e0b":prob>=30?"#f97316":"#ef4444";
+  const dash  = (prob/100)*226;
+  return `<div style="text-align:center">
+    <svg width="110" height="78" viewBox="0 0 110 78" style="overflow:visible">
+      <path d="M 15 65 A 40 40 0 1 1 95 65" fill="none" stroke="#1e3050" stroke-width="7" stroke-linecap="round"/>
+      <path d="M 15 65 A 40 40 0 1 1 95 65" fill="none" stroke="${clr}" stroke-width="7"
+        stroke-linecap="round" stroke-dasharray="${dash} 226"/>
+      <g transform="rotate(${angle},55,65)">
+        <line x1="55" y1="65" x2="55" y2="30" stroke="${clr}" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="55" cy="65" r="5" fill="${clr}"/>
+        <circle cx="55" cy="65" r="2.2" fill="#05101a"/>
+      </g>
+      <text x="55" y="60" text-anchor="middle" fill="${clr}"
+        font-size="14" font-weight="700" font-family="'Courier New',monospace">${prob}%</text>
+    </svg>
+    <div class="gauge-label">ACCEPT PROB</div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ASSET TAG
+// ─────────────────────────────────────────────────────────────────────────────
+function assetHTML(a) {
+  const clr = POS_CLR[a.pos]||"#94a3b8";
+  return `<div class="asset-tag">
+    <span class="pos-pill" style="color:${clr};background:${clr}18">${a.pos}</span>
+    <span class="asset-name">${a.name}</span>
+    <span class="asset-val">${(a.value||0).toLocaleString()}</span>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VOTE REVEAL BAR
+// ─────────────────────────────────────────────────────────────────────────────
+function voteRevealHTML(id) {
+  const t = TRADES.find(x=>x.id===id);
+  if(!t) return "";
+
+  // Use server-returned weighted totals if available, otherwise local counts
+  const wt = voteWeights[id];
+  const v  = wt
+    ? {accept:wt.accept, reject:wt.reject, counter:wt.counter}
+    : t.votes;
+
+  if(!voted[id] && !mySubmissions.has(id)) return "";
+  const total = (v.accept||0)+(v.reject||0)+(v.counter||0);
+  if(total===0) return "";
+  const aP=Math.round(((v.accept||0)/total)*100);
+  const cP=Math.round(((v.counter||0)/total)*100);
+  const rP=Math.round(((v.reject||0)/total)*100);
+  const weightedTotal = wt ? wt.total : total;
+  const totalLabel = API_BASE ? `${weightedTotal} weighted vote${weightedTotal!==1?'s':''}` : `${total} votes (demo)`;
+  return `<div class="vote-reveal">
+    <div class="vote-bar-track">
+      <div class="vote-bar-seg" style="width:${aP}%;background:#22c55e"></div>
+      <div class="vote-bar-seg" style="width:${cP}%;background:#f59e0b"></div>
+      <div class="vote-bar-seg" style="width:${rP}%;background:#ef4444"></div>
+    </div>
+    <div class="vote-stats">
+      <span style="color:#22c55e">✓ ${aP}% accept</span>
+      <span style="color:#f59e0b">≈ ${cP}% counter</span>
+      <span style="color:#ef4444">✗ ${rP}% reject</span>
+    </div>
+    <div class="vote-total">${totalLabel} · weight scales with Sleeper connection</div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRADE CARD HTML
+// ─────────────────────────────────────────────────────────────────────────────
+function cardHTML(t, delay) {
+  const z   = ZONES[t.model.zone]||ZONES.POSSIBLE;
+  const src = SRC_META[t.source]||SRC_META.corpus;
+  const cpPct = t.model.corpusPct;
+  const cpClr = cpPct!=null ? (cpPct>60?"#22c55e":cpPct>35?"#f59e0b":"#ef4444") : "#334155";
+  const isVoted    = voted[t.id];
+  const isExpanded = expanded[t.id];
+  const bullets    = isExpanded ? t.model.narrative : (t.model.narrative||[]).slice(0,2);
+  const extraCount = (t.model.narrative||[]).length - 2;
+
+  const clrs = {
+    accept:  ['#052e16','#166534','#22c55e'],
+    reject:  ['#1a0505','#7f1d1d','#ef4444'],
+    counter: ['#1c1004','#78350f','#f59e0b'],
+  };
+  const icons = {accept:'✓',reject:'✗',counter:'≈'};
+
+  const isMySubmission = mySubmissions.has(t.id);
+  const voteSection = isMySubmission
+    // Submitter sees analysis immediately but can't vote — show results if votes exist
+    ? `<div class="vote-result" style="background:#0f172a;border-color:rgba(99,102,241,0.3)">
+        <span class="vote-result-text" style="color:#a5b4fc">📤 Your submission — see results below</span>
+       </div>`
+    : isVoted
+    ? `<div class="vote-result" style="background:${clrs[isVoted][0]};border-color:${clrs[isVoted][1]}">
+        <span class="vote-result-text" style="color:${clrs[isVoted][2]}">${icons[isVoted]} VOTED ${isVoted.toUpperCase()} — recorded</span>
+       </div>`
+    : `<div class="vote-btns">
+        <button class="vote-btn" style="color:#22c55e;background:#052e16;border-color:#22c55e28"
+          onmouseover="this.style.background='#14532d'" onmouseout="this.style.background='#052e16'"
+          onclick="castVote('${t.id}','accept')">ACCEPT</button>
+        <button class="vote-btn" style="color:#f59e0b;background:#1c1004;border-color:#f59e0b28"
+          onmouseover="this.style.background='#451a03'" onmouseout="this.style.background='#1c1004'"
+          onclick="castVote('${t.id}','counter')">COUNTER</button>
+        <button class="vote-btn" style="color:#ef4444;background:#1a0505;border-color:#ef444428"
+          onmouseover="this.style.background='#450a0a'" onmouseout="this.style.background='#1a0505'"
+          onclick="castVote('${t.id}','reject')">REJECT</button>
+       </div>`;
+
+  return `<div class="trade-card" id="card-${t.id}" style="animation-delay:${delay}s">
+    <div class="card-header">
+      <div class="card-badges">
+        <span class="src-badge" style="color:${src.clr};background:${src.clr}15">${src.text}</span>
+        ${t.submittedAs==='received'?'<span class="rcvd-badge">RECEIVED OFFER</span>':''}
+      </div>
+      <div class="corpus-wrap">
+        <span class="corpus-label">CORPUS </span>
+        <span class="corpus-pct" style="color:${cpClr}">${cpPct!=null?cpPct+'%':'—'}</span>
+      </div>
+    </div>
+    <div class="trade-grid">
+      <div>
+        <div class="side-label">YOU GIVE</div>
+        <div class="assets">${(t.sending||[]).map(assetHTML).join('')}</div>
+      </div>
+      <div class="gauge-wrap" id="gauge-${t.id}">
+        ${(isVoted || isMySubmission)
+          ? gaugeHTML(t.model.prob)
+          : `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+              width:110px;height:78px;border-radius:50%;background:rgba(56,98,168,0.06);
+              border:2px dashed rgba(56,98,168,0.2)">
+              <div style="font-size:18px">🗳️</div>
+              <div style="font-size:9px;color:#4a6a8a;font-family:monospace;margin-top:3px;letter-spacing:.05em">VOTE TO SEE</div>
+            </div>`
+        }
+      </div>
+      <div>
+        <div class="side-label">YOU GET</div>
+        <div class="assets">${(t.receiving||[]).map(assetHTML).join('')}</div>
+      </div>
+    </div>
+    <div class="zone-banner" style="background:${(isVoted||isMySubmission)?z.bg:'rgba(56,98,168,0.04)'};border-color:${(isVoted||isMySubmission)?z.border:'rgba(56,98,168,0.12)'}">
+      <span class="zone-icon" style="color:${(isVoted||isMySubmission)?z.clr:'#4a6a8a'}">${(isVoted||isMySubmission)?z.icon:'⬜'}</span>
+      <div>
+        <span class="zone-label" style="color:${(isVoted||isMySubmission)?z.clr:'#4a6a8a'}">${(isVoted||isMySubmission)?z.label:'Vote to reveal model analysis'}</span>
+        <span class="zone-corpus">${(isVoted||isMySubmission)?(t.model.corpusLabel||''):''}</span>
+      </div>
+    </div>
+    <div class="narrative">
+      ${(bullets||[]).map(b=>`<div class="nar-bullet">${b}</div>`).join('')}
+      ${extraCount>0?`<button class="nar-more" onclick="toggleExpand('${t.id}')">
+        ${isExpanded?'▲ less':'▼ '+extraCount+' more'}</button>`:''}
+    </div>
+    <div id="vote-section-${t.id}">${voteSection}</div>
+    <div id="vote-reveal-${t.id}">${voteRevealHTML(t.id)}</div>
+    ${!isVoted?`<div style="text-align:center;margin-top:8px">
+      <button class="submit-link" onclick="window.location='dynastyiq-analyze.html'">+ analyze &amp; submit your own trade →</button>
+    </div>`:''}
+    <div class="card-footer">Optimized for 12-team superflex · results may vary for other formats</div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER FEED
+// ─────────────────────────────────────────────────────────────────────────────
+function renderFeed() {
+  // My Submissions tab — show all submitted trades with stats header
+  if(currentFilter === 'my_submissions') {
+    _renderMySubmissions();
+    return;
+  }
+
+  const filtered = TRADES.filter(t => {
+    if(hideVoted && voted[t.id] && !mySubmissions.has(t.id)) return false;
+    if(currentFilter==='borderline') return t.model.prob>=35&&t.model.prob<=65;
+    if(currentFilter==='unresolved') {
+      const total=(t.votes.accept||0)+(t.votes.reject||0)+(t.votes.counter||0);
+      return total<15;
+    }
+    return true;
+  });
+  const queuedCount = tradeQueue.filter(t => {
+    if(currentFilter==='borderline') return t.model.prob>=35&&t.model.prob<=65;
+    if(currentFilter==='unresolved') {
+      const total=(t.votes.accept||0)+(t.votes.reject||0)+(t.votes.counter||0);
+      return total<15;
+    }
+    return true;
+  }).length;
+  const hasMore = queuedCount > 0 || (totalTrades > (currentPage * 25));
+  const countLabel = hideVoted
+    ? `${filtered.filter(t=>!voted[t.id]&&!mySubmissions.has(t.id)).length} TO VOTE${queuedCount>0?' · '+queuedCount+' queued':''}`
+    : `${filtered.length} TRADES`;
+  document.getElementById('trade-count').textContent = countLabel;
+
+  const loadMoreBtn = hasMore && !hideVoted===false
+    ? `<div style="text-align:center;padding:24px 0">
+        <button onclick="loadMoreTrades()" id="load-more-btn"
+          style="background:rgba(29,78,216,0.12);border:1px solid rgba(29,78,216,0.3);
+          color:#93c5fd;border-radius:8px;padding:10px 28px;font-size:12px;
+          font-family:monospace;cursor:pointer;letter-spacing:.05em"
+          onmouseover="this.style.background='rgba(29,78,216,0.22)'"
+          onmouseout="this.style.background='rgba(29,78,216,0.12)'">
+          LOAD MORE TRADES
+        </button>
+       </div>`
+    : '';
+
+  document.getElementById('feed').innerHTML = filtered.length
+    ? filtered.map((t,i)=>cardHTML(t,i*0.07)).join('') + loadMoreBtn
+    : `<div style="text-align:center;padding:48px 0;color:#4a6a8a;font-size:13px;font-family:monospace">
+        ${hideVoted ? "You've voted on everything! Hit Show Voted to review." : (API_BASE?'No trades match this filter':'No trades — add some in Supabase to get started')}
+       </div>` + loadMoreBtn;
+}
+
+function _updateLoadMoreBtn() {
+  const hasMore = tradeQueue.length > 0 || (totalTrades > (currentPage * 25));
+  const btn = document.getElementById('load-more-btn');
+  if(btn && !hasMore) btn.parentElement.remove();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTER
+// ─────────────────────────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(f === 'my_submissions') {
+    // My Submissions: render from already-loaded TRADES — no API reload needed
+    renderFeed();
+  } else if(API_BASE) {
+    loadTrades();
+  } else {
+    renderFeed();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAST VOTE  — saves locally + posts to API if configured
+// ─────────────────────────────────────────────────────────────────────────────
+async function castVote(id, v) {
+  if(voted[id]) return;
+  if(mySubmissions.has(id)) return;  // submitters cannot vote on their own trades
+
+  // Optimistic update — show result immediately
+  voted[id] = v;
+  _saveVotedState(voted);   // persist so vote survives page navigation
+  const t = TRADES.find(x=>x.id===id);
+  if(t) t.votes[v] = (t.votes[v]||0) + 1;
+
+  const clrs = {
+    accept:  ['#052e16','#166534','#22c55e'],
+    reject:  ['#1a0505','#7f1d1d','#ef4444'],
+    counter: ['#1c1004','#78350f','#f59e0b'],
+  };
+  const icons = {accept:'✓',reject:'✗',counter:'≈'};
+  const [bg,border,txt] = clrs[v];
+
+  document.getElementById('vote-section-'+id).innerHTML =
+    `<div class="vote-result" style="background:${bg};border-color:${border}">
+       <span class="vote-result-text" style="color:${txt}">${icons[v]} VOTED ${v.toUpperCase()} — recorded</span>
+     </div>
+     ${API_BASE?'<div class="vote-saving">Saving…</div>':''}`;
+
+  const card = document.getElementById('card-'+id);
+  const sl   = card && card.querySelector('.submit-link');
+  if(sl) sl.parentElement.style.display='none';
+
+  // Post to API if configured
+  if(API_BASE) {
+    try {
+      const r = await fetch(`${API_BASE}/vote`, {
+        method:  'POST',
+        headers: {'Content-Type':'application/json'},
+        body:    JSON.stringify({trade_id:id, vote:v, device_id:getDeviceId()}),
+      });
+      if(r.ok) {
+        const data = await r.json();
+        if(data.vote_totals) {
+          // Store server-side weighted totals for the reveal bar
+          voteWeights[id] = data.vote_totals;
+        }
+        // Clear the "Saving…" note
+        const savingEl = document.querySelector(`#vote-section-${id} .vote-saving`);
+        if(savingEl) savingEl.remove();
+      }
+    } catch(err) {
+      console.warn('Vote POST failed (vote still recorded locally):', err.message);
+      const savingEl = document.querySelector(`#vote-section-${id} .vote-saving`);
+      if(savingEl) savingEl.textContent = 'Saved locally';
+    }
+  }
+
+  // Secret achievements
+  if(window.arcPoints) {
+    // Certified Degenerate: clicked Accept on a trade in the lowest tier (< 25%)
+    if(v === 'accept' && t && t.model && t.model.prob < 25) {
+      arcPoints.awardSecret('secret_certified_degenerate');
+    }
+    // Against the Grain: voted the least popular option (checked after server returns)
+  }
+
+  // Reveal gauge and zone banner now that user has voted
+  const gaugeEl = document.getElementById('gauge-'+id);
+  if(gaugeEl) gaugeEl.innerHTML = gaugeHTML(t.model.prob);
+
+  // Update the reveal bar with current totals
+  document.getElementById('vote-reveal-'+id).innerHTML = voteRevealHTML(id);
+
+  // If hiding voted trades, slide card out and inject next from queue
+  if(hideVoted) {
+    setTimeout(() => {
+      const card = document.getElementById('card-'+id);
+      if(card) {
+        card.style.transition = 'opacity 0.4s, transform 0.4s';
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(30px)';
+        setTimeout(() => {
+          card.remove();
+          // Pull next unvoted trade from queue and inject into feed
+          _injectNextFromQueue();
+          // Fetch more in background if queue is getting low
+          if(tradeQueue.length < 3 && totalTrades > currentPage * 25 && !loadingMore) {
+            loadMoreTrades();
+          }
+        }, 400);
+      }
+    }, 1200);
+  }
+}
+
+function _injectNextFromQueue() {
+  if(!hideVoted) return;
+  // Find next trade in queue that passes current filter
+  let next = null;
+  while(tradeQueue.length > 0) {
+    const candidate = tradeQueue.shift();
+    // Skip if already voted (could have voted from another session)
+    if(voted[candidate.id] || mySubmissions.has(candidate.id)) {
+      TRADES.push(candidate);  // move to TRADES so show-voted can display it
+      continue;
+    }
+    if(currentFilter==='borderline' && !(candidate.model.prob>=35&&candidate.model.prob<=65)) continue;
+    if(currentFilter==='unresolved') {
+      const total=(candidate.votes.accept||0)+(candidate.votes.reject||0)+(candidate.votes.counter||0);
+      if(total>=15) continue;
+    }
+    next = candidate;
+    break;
+  }
+  if(!next) {
+    // Queue empty — update count display
+    const remaining = document.querySelectorAll('.trade-card').length;
+    const label = remaining > 0 ? remaining+' TO VOTE' : "You've voted on everything!";
+    document.getElementById('trade-count').textContent = label;
+    return;
+  }
+  // Add to TRADES and inject card into feed
+  TRADES.push(next);
+  const feed = document.getElementById('feed');
+  const div = document.createElement('div');
+  div.innerHTML = cardHTML(next, 0);
+  const newCard = div.firstElementChild;
+  newCard.style.opacity = '0';
+  newCard.style.transform = 'translateX(-20px)';
+  feed.appendChild(newCard);
+  requestAnimationFrame(() => {
+    newCard.style.transition = 'opacity 0.35s, transform 0.35s';
+    newCard.style.opacity = '1';
+    newCard.style.transform = 'translateX(0)';
+  });
+  // Update count
+  const remaining = document.querySelectorAll('.trade-card').length;
+  const queueLeft = tradeQueue.filter(t => !voted[t.id]).length;
+  document.getElementById('trade-count').textContent =
+    remaining+' TO VOTE'+(queueLeft>0?' · '+queueLeft+' queued':'');
+}
+
+function _renderMySubmissions() {
+  // Gather all submission trades — from TRADES and tradeQueue
+  const allKnown = [...TRADES, ...tradeQueue];
+  const seen = new Set();
+  const submissions = allKnown.filter(t => {
+    if(!mySubmissions.has(t.id) || seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
+  });
+
+  // Sort by total votes desc so most-voted show first
+  submissions.sort((a,b) => {
+    const av = (a.votes.accept||0)+(a.votes.reject||0)+(a.votes.counter||0);
+    const bv = (b.votes.accept||0)+(b.votes.reject||0)+(b.votes.counter||0);
+    return bv - av;
+  });
+
+  // Compute aggregate stats
+  let totalVotes = 0, totalAccept = 0, totalReject = 0, totalCounter = 0;
+  submissions.forEach(t => {
+    const wt = voteWeights[t.id];
+    const a = wt ? wt.accept  : (t.votes.accept||0);
+    const r = wt ? wt.reject  : (t.votes.reject||0);
+    const c = wt ? wt.counter : (t.votes.counter||0);
+    totalAccept  += a;
+    totalReject  += r;
+    totalCounter += c;
+    totalVotes   += a + r + c;
+  });
+  const acceptPct  = totalVotes > 0 ? Math.round(totalAccept  / totalVotes * 100) : 0;
+  const rejectPct  = totalVotes > 0 ? Math.round(totalReject  / totalVotes * 100) : 0;
+  const counterPct = totalVotes > 0 ? Math.round(totalCounter / totalVotes * 100) : 0;
+
+  document.getElementById('trade-count').textContent = submissions.length + ' SUBMITTED';
+
+  const statsBar = submissions.length > 0 && totalVotes > 0 ? `
+    <div style="display:flex;gap:16px;padding:12px 16px;margin-bottom:16px;
+      background:rgba(192,132,252,0.06);border:1px solid rgba(192,132,252,0.15);
+      border-radius:8px;font-size:11px;font-family:monospace">
+      <span style="color:#a5b4fc;font-weight:700">${submissions.length} trades · ${totalVotes} votes total</span>
+      <span style="color:#22c55e">✓ ${acceptPct}% accept</span>
+      <span style="color:#f59e0b">≈ ${counterPct}% counter</span>
+      <span style="color:#ef4444">✗ ${rejectPct}% reject</span>
+    </div>` : '';
+
+  document.getElementById('feed').innerHTML = submissions.length
+    ? statsBar + submissions.map((t,i) => cardHTML(t, i*0.05)).join('')
+    : `<div style="text-align:center;padding:48px 0;color:#4a6a8a;font-size:13px;font-family:monospace">
+        No submissions yet — submit a trade from the Analyze page to see results here.
+       </div>`;
+}
+
+function _updateSubmissionsCount() {
+  const countEl = document.getElementById('my-submissions-count');
+  if(!countEl) return;
+  const n = mySubmissions.size;
+  if(n > 0) {
+    countEl.textContent = n;
+    countEl.style.display = 'inline';
+  }
+}
+
+function toggleHideVoted(btn) {
+  hideVoted = !hideVoted;
+  btn.textContent = hideVoted ? 'Show Voted' : 'Hide Voted ✓';
+  btn.style.background = hideVoted ? '' : 'rgba(99,102,241,0.15)';
+  btn.style.borderColor = hideVoted ? '' : 'rgba(99,102,241,0.4)';
+  btn.style.color = hideVoted ? '' : '#a5b4fc';
+  renderFeed();
+}
+
+function toggleExpand(id) {
+  expanded[id] = !expanded[id];
+  renderFeed();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLEEPER MODAL — posts to /api/sleeper if configured, otherwise simulates
+// ─────────────────────────────────────────────────────────────────────────────
+function openSleeper()  { renderSleeperInput(); document.getElementById('sleeper-overlay').style.display='flex'; }
+function closeSleeper() { document.getElementById('sleeper-overlay').style.display='none'; }
+
+function renderSleeperInput() {
+  document.getElementById('sleeper-body').innerHTML = `
+    <div class="field-label">SLEEPER USERNAME</div>
+    <div class="input-row">
+      <input id="sleeper-input" placeholder="e.g. swaggyj0"
+        onkeydown="if(event.key==='Enter')sleeperSearch()"/>
+      <button class="search-btn" onclick="sleeperSearch()">Search</button>
+    </div>
+    <div class="info-box info-blue">
+      We read your accepted trade history and roster data from the public Sleeper API.
+      No account credentials required.
+    </div>`;
+}
+
+function sleeperSearch() {
+  const u = document.getElementById('sleeper-input').value.trim();
+  if(!u) return;
+  document.getElementById('sleeper-body').innerHTML = `
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-text">Looking up @${u}…</div>
+    </div>`;
+
+  if(API_BASE) {
+    // Call the real Sleeper API via our backend
+    fetch(`${API_BASE}/sleeper`, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({username:u, device_id:getDeviceId()}),
+    })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(data => renderSleeperLeagues(u, data.leagues||[]))
+    .catch(() => {
+      // If API fails, fall back to demo league display
+      renderSleeperLeagues(u, null);
+    });
+  } else {
+    // No API yet — show demo leagues after a short delay
+    setTimeout(() => renderSleeperLeagues(u, null), 1100);
+  }
+}
+
+function renderSleeperLeagues(u, leagues) {
+  // If no real leagues returned, show demo leagues
+  const list = leagues || [
+    {name:"The Gridiron Mafia",   roster_count:12, scoring_type:"PPR", is_superflex:true,  is_standard:true},
+    {name:"Fantasy Legends 2024", roster_count:12, scoring_type:"PPR", is_superflex:true,  is_standard:true},
+    {name:"The Dynasty Lab",      roster_count:10, scoring_type:"Half PPR", is_superflex:true, is_standard:false},
+  ];
+  const isDemoMode = !leagues;
+
+  document.getElementById('sleeper-body').innerHTML = `
+    <div class="leagues-label">${list.length} LEAGUE${list.length!==1?'S':''} FOUND${isDemoMode?' (demo)':''}</div>
+    ${list.map(l=>`
+      <div class="league-row">
+        <div>
+          <div class="league-name">${l.name}</div>
+          <div class="league-meta">${l.roster_count||12} teams · ${l.scoring_type||'PPR'} ${l.is_superflex?'SF':''}</div>
+        </div>
+        <span class="league-badge"
+          style="color:${l.is_standard?'#22c55e':'#f59e0b'};background:${l.is_standard?'rgba(34,197,94,0.08)':'rgba(245,158,11,0.08)'}">
+          ${l.is_standard?'12-TEAM SF ✓':'NON-STANDARD'}
+        </span>
+      </div>`).join('')}
+    <div class="info-box info-amber" style="margin-top:4px">
+      ⚠️ Non-standard leagues imported for reference only. Model training uses 12-team superflex exclusively.
+    </div>
+    <button class="connect-all-btn" onclick="sleeperConnect('${u}')">Connect All Leagues</button>`;
+}
+
+function sleeperConnect(u) {
+  document.getElementById('sleeper-body').innerHTML = `
+    <div class="done-wrap">
+      <div class="done-icon">✓</div>
+      <div class="done-title">Connected!</div>
+      <div class="done-sub">@${u}'s leagues are now contributing to the model.<br>Your vote weight has been increased.</div>
+    </div>`;
+  setTimeout(()=>{
+    isConnected   = true;
+    sleeperUser   = u;
+    localStorage.setItem('diq_sleeper_user', u);
+    document.getElementById('connect-btn').style.display='none';
+    const badge = document.getElementById('connected-badge');
+    badge.textContent = '✓ @'+u;
+    badge.style.display='inline';
+    document.getElementById('nudge').style.display='none';
+    closeSleeper();
+  }, 1200);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUBMIT MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function openSubmit()  { renderSubmitRole(); document.getElementById('submit-overlay').style.display='flex'; }
+function closeSubmit() { document.getElementById('submit-overlay').style.display='none'; }
+
+function renderSubmitRole() {
+  document.getElementById('submit-body').innerHTML = `
+    <div style="font-size:13px;color:#7c9cbf;margin-bottom:14px">
+      Was this trade sent to you, or are you thinking of sending it?
+    </div>
+    <div class="role-grid">
+      <button class="role-btn" style="border-color:#818cf828" onclick="renderSubmitPlaceholder()">
+        <div class="role-btn-label" style="color:#818cf8">I received this offer</div>
+        <div class="role-btn-desc">Higher prior for rejected trade data</div>
+      </button>
+      <button class="role-btn" style="border-color:#34d39928" onclick="renderSubmitPlaceholder()">
+        <div class="role-btn-label" style="color:#34d399">Thinking of sending</div>
+        <div class="role-btn-desc">Evaluating a potential offer to make</div>
+      </button>
+    </div>
+    <div class="info-box info-blue" style="font-size:11px">
+      Received offers are especially valuable — they give us the best proxy for rejected trade data.
+    </div>`;
+}
+function renderSubmitPlaceholder() {
+  document.getElementById('submit-body').innerHTML = `
+    <div class="submit-placeholder">
+      <div class="submit-icon">⇄</div>
+      <div class="submit-text">
+        Analyze your trade first, then hit<br>
+        <strong>"Submit for Community Review"</strong> on the result card.
+      </div>
+      <button class="got-it-btn" onclick="closeSubmit();window.location='dynastyiq-analyze.html'">
+        Go to Analyze →
+      </button>
+    </div>`;
+}
+
+function overlayClick(e, id) {
+  if(e.target===document.getElementById(id)) document.getElementById(id).style.display='none';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESTORE SLEEPER SESSION
+// ─────────────────────────────────────────────────────────────────────────────
+function restoreSession() {
+  const u = localStorage.getItem('diq_sleeper_user');
+  if(u) {
+    isConnected = true;
+    sleeperUser = u;
+    document.getElementById('connect-btn').style.display='none';
+    const badge = document.getElementById('connected-badge');
+    badge.textContent = '✓ @'+u;
+    badge.style.display = 'inline';
+    document.getElementById('nudge').style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVE KTC VALUES — fetch from server.py via /api/players on load
+// This makes the vote feed show the same values as the analyze page
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadLiveKtc() {
+  if (!API_BASE) return;
+  try {
+    const r = await fetch(`${API_BASE}/players`, {signal: AbortSignal.timeout(10000)});
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data && typeof data === 'object' && !data.error && Object.keys(data).length > 100) {
+      // Merge live values into KTC_SNAP in-place
+      Object.assign(KTC_SNAP, data);
+    }
+  } catch {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+restoreSession();
+// Fetch live KTC values first, then load trades so asset values are current
+loadLiveKtc().then(() => loadTrades());
+</script>
+<script src="arc-profile.js"></script>
+</body>
+</html>
