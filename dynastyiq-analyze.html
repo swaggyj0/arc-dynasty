@@ -1280,45 +1280,52 @@ const ZONE_STRIP = [
 
 function valueGapMessage(r, dir) {
   const prob    = r.acceptance_probability || 0;
-  const vSend   = r.val_send || 0;  // what YOU send (a_ side)
-  const vRecv   = r.val_recv || 0;  // what YOU receive (b_ side)
+  const vSend   = r.val_send || 0;  // a_ktc: what YOU send / they receive
+  const vRecv   = r.val_recv || 0;  // b_ktc: what YOU receive / they give up
   const diff    = Math.abs(vSend - vRecv);
-  const youOverpay = vSend > vRecv;   // you're giving up more KTC than you're getting
-  const highProb   = prob >= 58;
-  const lowProb    = prob < 42;
+  const rcvd    = (dir === "received");
+  const highProb = prob >= 58;
+  const lowProb  = prob < 42;
 
-  // Even trade — always the same regardless of probability
+  // Even trade
   if (diff < 300) {
     return "Roughly even by KTC — deal likelihood depends on fit and player attachment.";
   }
 
-  // Low prob + you overpay = the critical confusing case
-  // Don't say "you're giving up more" because that implies "add more value to fix it"
-  // The real issue is behavioral — attachment, structure, or stud-for-scrubs dynamic
-  if (lowProb && youOverpay) {
-    return `You're offering above-market value (+${diff.toLocaleString()} KTC in their favor) — the resistance here isn't about value. The model sees attachment or structural friction as the real barrier.`;
-  }
-
-  // High prob + you overpay = strong offer, lead with confidence
-  if (highProb && youOverpay) {
-    return `You're sending strong value (+${diff.toLocaleString()} KTC in their favor) — behavioral signals confirm this offer is in good territory.`;
-  }
-
-  // You underpay + low prob = straightforward, need more value
-  if (lowProb && !youOverpay) {
-    return `Value favors you by ${diff.toLocaleString()} KTC — this offer needs more value to start a conversation.`;
-  }
-
-  // You underpay + high prob = behavioral signals doing the work
-  if (highProb && !youOverpay) {
-    return `Value favors you by ${diff.toLocaleString()} KTC, but behavioral signals suggest they'd still accept.`;
-  }
-
-  // Medium probability — show the raw gap neutrally
-  if (youOverpay) {
-    return `You're giving up +${diff.toLocaleString()} more KTC than you're getting — this offer favors them.`;
+  if (rcvd) {
+    // RECEIVED mode: someone sent this TO you. YOU are the receiver.
+    // vSend = what you'd give up, vRecv = what you'd get
+    const youGetMore = vRecv > vSend;  // you'd receive more than you give up
+    if (youGetMore) {
+      if (highProb) return `This offer is in your favor (+${diff.toLocaleString()} KTC) — behavioral signals support accepting.`;
+      return `Value favors you (+${diff.toLocaleString()} KTC) — but behavioral signals suggest caution before accepting.`;
+    } else {
+      // You'd give up more than you get
+      if (lowProb) return `You'd be giving up +${diff.toLocaleString()} more KTC than you receive — this offer favors the sender.`;
+      return `You'd give up +${diff.toLocaleString()} more KTC than you receive, but behavioral signals may justify it.`;
+    }
   } else {
-    return `You'd receive +${diff.toLocaleString()} more KTC than you give up — this offer is in your favor.`;
+    // SENT mode: YOU are sending this offer. THEY are the receiver.
+    // vSend > vRecv means you're giving them more than you're getting back
+    const youOverpay = vSend > vRecv;
+    if (lowProb && youOverpay) {
+      // Critical case: overpaying but low prob — resistance isn't about value
+      return `You're offering above-market value (+${diff.toLocaleString()} KTC in their favor) — the resistance here isn't about value. The model sees attachment or structural friction as the real barrier.`;
+    }
+    if (highProb && youOverpay) {
+      return `You're sending strong value (+${diff.toLocaleString()} KTC in their favor) — behavioral signals confirm this offer is in good territory.`;
+    }
+    if (lowProb && !youOverpay) {
+      return `Value favors you by ${diff.toLocaleString()} KTC — this offer needs more value to start a conversation.`;
+    }
+    if (highProb && !youOverpay) {
+      return `Value favors you by ${diff.toLocaleString()} KTC, but behavioral signals suggest they'd still accept.`;
+    }
+    if (youOverpay) {
+      return `You're giving up +${diff.toLocaleString()} more KTC than you're getting — this offer favors them.`;
+    } else {
+      return `You'd receive +${diff.toLocaleString()} more KTC than you give up — this offer is in your favor.`;
+    }
   }
 }
 
