@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ARC Dynasty — Analyze Trade</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05101a;font-family:'Segoe UI',system-ui,sans-serif;color:#d0e4f8;min-height:100vh}
+button,input,select{font-family:inherit;cursor:pointer}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#07111c}
+::-webkit-scrollbar-thumb{background:#1e3050;border-radius:2px}
+
+/* ── HEADER ── */
+#header{background:rgba(5,16,26,0.97);border-bottom:1px solid rgba(56,98,168,0.15);
+  padding:0 24px;display:flex;align-items:center;justify-content:space-between;
+  height:54px;position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#2563eb,#7c3aed);
+  border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff}
+.logo-text{font-size:16px;font-weight:800;letter-spacing:-0.025em;color:#e2eaf8}
+.logo-text span{color:#3b82f6}
+.beta{font-size:9px;font-family:monospace;letter-spacing:0.1em;color:#2563eb;
+  background:rgba(37,99,235,0.12);padding:2px 7px;border-radius:3px}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-btn{background:none;border:1px solid transparent;border-radius:6px;
+  padding:5px 12px;color:#475569;font-size:13px;font-weight:500;transition:color 0.14s}
+.nav-btn.active{background:rgba(37,99,235,0.12);border-color:rgba(37,99,235,0.25);color:#93c5fd}
+.nav-btn:hover{color:#93c5fd}
+.nav-divider{width:1px;height:20px;background:rgba(56,98,168,0.2);margin:0 4px}
+
+/* ── SERVER STATUS ── */
+#server-bar{padding:8px 24px;display:flex;align-items:center;gap:10px;font-size:12px;
+  border-bottom:1px solid rgba(56,98,168,0.07)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-checking{background:#475569;animation:pulse 1s infinite}
+.dot-online{background:#22c55e}
+.dot-offline{background:#ef4444}
+
+/* ── MAIN ── */
+#main{max-width:860px;margin:0 auto;padding:28px 16px}
+.page-title{font-size:22px;font-weight:800;color:#e2eaf8;letter-spacing:-0.02em;margin-bottom:4px}
+.page-sub{font-size:13px;color:#64748b;margin-bottom:24px}
+
+/* ── BUILDER CARD ── */
+.builder{background:linear-gradient(160deg,#0e2240 0%,#091828 60%,#07131f 100%);
+  border:1px solid rgba(56,98,168,0.2);border-radius:14px;padding:22px;margin-bottom:20px}
+.builder-grid{display:grid;grid-template-columns:1fr 48px 1fr;gap:16px;align-items:start;margin-bottom:20px}
+.side-label{font-size:9px;letter-spacing:0.14em;color:#4a6a8a;font-family:monospace;
+  font-weight:700;margin-bottom:10px;text-transform:uppercase}
+.side-label.give{color:#4a9eff}
+.side-label.get{color:#22c55e}
+.arrow-col{display:flex;align-items:center;justify-content:center;padding-top:28px}
+.arrow-circle{width:36px;height:36px;border-radius:50%;border:1px solid rgba(56,98,168,0.25);
+  display:flex;align-items:center;justify-content:center;color:#64748b;font-size:18px}
+
+/* SEARCH */
+.search-wrap{position:relative}
+.search-input{width:100%;background:#071420;border:1px solid rgba(56,98,168,0.25);
+  border-radius:8px;padding:10px 13px;color:#d0e4f8;font-size:13px;outline:none;
+  transition:border-color 0.2s}
+.search-input:focus{border-color:rgba(59,130,246,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.07)}
+.search-input::placeholder{color:#4a6a8a}
+.dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:400;
+  background:#0b1a2a;border:1px solid #1e3050;border-radius:8px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.7);max-height:320px;overflow-y:auto}
+.dropdown-item{padding:8px 13px;cursor:pointer;font-size:13px;color:#b8cee6;
+  border-bottom:1px solid #0d1521;display:flex;justify-content:space-between;
+  align-items:center;transition:background 0.1s}
+.dropdown-item:last-child{border-bottom:none}
+.dropdown-item:hover{background:#132234}
+.dropdown-val{font-size:11px;font-weight:700}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:28px}
+.asset-tag{display:flex;align-items:center;gap:6px;border-radius:20px;padding:4px 10px;
+  font-size:12px;border:1px solid;animation:fadeUp 0.18s ease}
+.asset-tag-pos{font-size:8px;font-weight:700;letter-spacing:0.1em;padding:1px 4px;
+  border-radius:3px;font-family:monospace;flex-shrink:0}
+.asset-tag-name{color:#c8daf0}
+.asset-tag-val{font-size:10px;font-weight:700}
+.asset-tag-rm{color:#f87171;font-weight:700;font-size:13px;cursor:pointer;
+  margin-left:3px;line-height:1;flex-shrink:0}
+.asset-tag-rm:hover{color:#fca5a5}
+
+/* ── DIRECTION + MANAGER ROW ── */
+.controls-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.control-block{}
+.ctrl-label{font-size:9.5px;letter-spacing:0.1em;color:#64748b;font-family:monospace;
+  font-weight:700;margin-bottom:7px;text-transform:uppercase}
+.toggle-row{display:flex;gap:8px}
+.toggle-btn{flex:1;padding:8px;border-radius:7px;font-size:12px;font-weight:600;
+  border:1px solid rgba(56,98,168,0.2);background:transparent;
+  color:#475569;transition:all 0.14s}
+.toggle-btn.active-give{background:rgba(74,158,255,0.1);border-color:rgba(74,158,255,0.4);color:#4a9eff}
+.toggle-btn.active-receive{background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.3);color:#22c55e}
+.mgr-select{width:100%;background:#071420;border:1px solid rgba(56,98,168,0.25);
+  border-radius:8px;padding:9px 13px;color:#d0e4f8;font-size:13px;outline:none;
+  transition:border-color 0.2s;appearance:none}
+.mgr-select:focus{border-color:rgba(59,130,246,0.5)}
+.mgr-select option{background:#0b1a2a;color:#d0e4f8}
+
+/* ── ANALYZE BUTTON ── */
+.analyze-row{display:flex;justify-content:center;margin-top:20px}
+#analyze-btn{background:linear-gradient(135deg,#1d4ed8,#2563eb);border:none;
+  border-radius:10px;padding:13px 40px;color:#fff;font-size:15px;font-weight:700;
+  letter-spacing:0.02em;transition:all 0.16s;box-shadow:0 4px 20px rgba(29,78,216,0.35)}
+#analyze-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 28px rgba(29,78,216,0.5)}
+#analyze-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none}
+#analyze-btn .btn-spinner{display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;
+  border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;vertical-align:middle}
+
+/* ── RESULT CARD ── */
+#result{display:none;animation:fadeUp 0.4s ease}
+.result-card{background:linear-gradient(160deg,#0e2240 0%,#091828 55%,#07131f 100%);
+  border:1px solid rgba(56,98,168,0.2);border-radius:14px;padding:24px;
+  box-shadow:0 2px 28px rgba(0,0,0,0.3)}
+
+/* GAUGE */
+.result-top{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.gauge-col{flex-shrink:0;text-align:center}
+.gauge-label{font-size:9px;color:#64748b;letter-spacing:0.1em;font-family:monospace;margin-top:3px}
+.verdict-col{flex:1;min-width:200px}
+.verdict-pill{display:inline-block;border-radius:8px;padding:5px 16px;font-weight:800;
+  font-size:18px;margin-bottom:10px;letter-spacing:-0.02em;border:1px solid}
+.value-gap-text{color:#9ab8d8;font-size:13px;line-height:1.65;margin-bottom:12px}
+
+/* VALUE BAR */
+.val-bar-wrap{margin-bottom:16px}
+.val-bar-nums{display:flex;justify-content:space-between;font-size:11px;color:#4a6a8a;margin-bottom:4px}
+.val-bar-track{height:5px;border-radius:3px;background:#0d1e33;overflow:hidden}
+.val-bar-fill{height:100%;background:linear-gradient(90deg,#1a5fff,#4a9eff);
+  border-radius:3px;transition:width 0.6s ease}
+.val-bar-labels{display:flex;justify-content:space-between;font-size:9px;color:#2a4a6a;margin-top:3px}
+
+/* CONVERSATION RANGE BANNER */
+.conv-banner{border-radius:10px;padding:12px 14px;margin-bottom:12px;border:1px solid}
+.conv-banner-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.conv-icon{font-size:22px;line-height:1}
+.conv-title{font-weight:800;font-size:15px;letter-spacing:-0.01em}
+.conv-text{color:#7a9ab8;font-size:11px;margin-top:1px}
+.zone-strip{display:flex;gap:4px;margin-bottom:4px}
+.zone-seg{flex:1;height:6px;border-radius:3px;transition:background 0.3s}
+.zone-labels{display:flex}
+.zone-lbl{flex:1;font-size:8px;text-align:center}
+.divergence-note{font-size:10px;color:#f59e0b;margin-top:5px;font-style:italic}
+
+/* CORPUS BADGE */
+.corpus-badge{background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.18);
+  border-radius:9px;padding:10px 14px;margin-bottom:12px}
+.corpus-badge-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.corpus-title{font-size:12px;font-weight:700;color:#60a5fa;letter-spacing:0.02em}
+.corpus-dots{display:flex;gap:4px}
+.corpus-dot{width:10px;height:10px;border-radius:50%}
+.corpus-row{display:flex;gap:10px;flex-wrap:wrap}
+.corpus-stat{font-size:10px;color:#4a7aaa}
+.corpus-stat strong{color:#93c5fd}
+.corpus-divergence{font-size:10px;color:#f59e0b;margin-top:5px;font-style:italic}
+
+/* NARRATIVE */
+.narrative-section{margin-bottom:16px}
+.nar-bullet{display:flex;gap:8px;align-items:flex-start;padding:6px 0;
+  border-bottom:1px solid #0d1e30;font-size:12px;line-height:1.5}
+.nar-bullet:last-child{border-bottom:none}
+.nar-icon{flex-shrink:0;font-size:14px}
+.nar-good{color:#86efac}
+.nar-bad{color:#fca5a5}
+.nar-neutral{color:#9ab8d8}
+
+/* PRODUCTION PROFILES */
+.profiles-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.profile-col-label{font-size:8px;color:#2a4a6a;font-weight:700;letter-spacing:0.1em;
+  text-transform:uppercase;margin-bottom:6px}
+.profile-row{display:flex;align-items:center;justify-content:space-between;gap:4px;
+  margin-bottom:4px;border-radius:5px;padding:3px 5px}
+.profile-name{font-size:10px;color:#7a9ab8;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;max-width:100px}
+.profile-badges{display:flex;gap:3px;align-items:center;flex-shrink:0}
+.profile-val{font-size:9px;color:#3a5a7a}
+.tier-pill{font-size:8px;font-weight:700;border-radius:8px;padding:0 5px;
+  border:1px solid;white-space:nowrap}
+.pick-pill{font-size:8px;font-weight:700;border-radius:8px;padding:0 5px;border:1px solid}
+
+/* COMPARABLE TRADES */
+.comparables{background:rgba(255,255,255,0.02);border:1px solid rgba(56,98,168,0.12);
+  border-radius:10px;padding:14px;margin-bottom:16px}
+.comp-title{font-size:11px;font-weight:700;color:#4a7aaa;letter-spacing:0.04em;margin-bottom:10px}
+.comp-trade{padding:7px 0;border-bottom:1px solid rgba(56,98,168,0.08);font-size:11px}
+.comp-trade:last-child{border-bottom:none}
+.comp-sides{display:flex;gap:6px;align-items:center;margin-bottom:3px;flex-wrap:wrap}
+.comp-assets{color:#7a9ab8}
+.comp-arrow{color:#64748b;font-size:12px}
+.comp-meta{font-size:10px;color:#2a4a6a}
+.comp-sim{font-size:9px;font-weight:700;font-family:monospace;color:#4a7aaa;background:rgba(74,122,170,0.1);border:1px solid rgba(74,122,170,0.2);border-radius:3px;padding:1px 5px;flex-shrink:0}
+.comp-expand{display:block;width:100%;margin-top:8px;padding:5px;background:none;border:1px solid rgba(56,98,168,0.2);border-radius:5px;color:#4a7aaa;font-size:10px;cursor:pointer;text-align:center;letter-spacing:0.04em}
+.comp-expand:hover{background:rgba(56,98,168,0.08)}
+.comp-hidden{display:none}
+
+/* WARN BOXES */
+.warn-box{border-radius:7px;padding:8px 11px;font-size:11px;margin-bottom:10px;
+  display:flex;gap:6px;align-items:flex-start;line-height:1.5}
+.warn-amber{background:#180e04;border:1px solid rgba(249,116,22,0.27);color:#fdba74}
+.warn-yellow{background:#1c1208;border:1px solid #7a4a10;color:#fcd34d}
+
+/* OVERPAY WARNING */
+.overpay-warn{background:#1c1000;border:1px solid rgba(245,158,11,0.53);border-radius:9px;
+  padding:10px 13px;margin-bottom:14px;font-size:12px;color:#fcd34d;
+  display:flex;gap:8px;align-items:flex-start}
+
+/* SUBMIT REVIEW */
+.submit-review-bar{background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.22);
+  border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;
+  align-items:center;gap:16px;margin-top:4px}
+.submit-review-text{font-size:13px;color:#c4b5fd}
+.submit-review-text span{font-weight:700;color:#a78bfa}
+#submit-review-btn{background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);
+  border-radius:8px;padding:9px 18px;color:#c4b5fd;font-size:13px;font-weight:700;
+  flex-shrink:0;transition:all 0.14s}
+#submit-review-btn:hover{background:rgba(99,102,241,0.32)}
+
+/* LOG OUTCOME */
+.log-outcome-bar{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.log-label{font-size:11px;color:#64748b;flex-shrink:0}
+.log-btn{border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;
+  font-family:monospace;letter-spacing:0.06em;border:1px solid;transition:all 0.14s}
+.log-accepted{color:#22c55e;background:#052e16;border-color:#22c55e28}
+.log-accepted:hover{background:#14532d}
+.log-rejected{color:#ef4444;background:#1a0505;border-color:#ef444428}
+.log-rejected:hover{background:#450a0a}
+.log-countered{color:#f59e0b;background:#1c1004;border-color:#f59e0b28}
+.log-countered:hover{background:#451a03}
+.log-done{font-size:11px;font-family:monospace;padding:6px 12px;border-radius:6px;
+  background:#0d2040;border:1px solid rgba(56,98,168,0.3);color:#4a9eff}
+/* Counter panel */
+.counter-panel{background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.2);
+  border-radius:10px;padding:16px;margin-top:12px;animation:fadeUp 0.3s ease}
+.counter-panel-title{font-size:11px;font-weight:700;letter-spacing:0.1em;
+  color:#f59e0b;font-family:monospace;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+.counter-panel-sub{font-size:11px;color:#475569;margin-bottom:14px;line-height:1.5}
+.counter-sides{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.counter-side-label{font-size:9px;letter-spacing:0.12em;color:#4a6a8a;
+  margin-bottom:7px;font-family:monospace;font-weight:700}
+.counter-search{width:100%;background:#071420;border:1px solid rgba(245,158,11,0.2);
+  border-radius:7px;padding:8px 11px;color:#d0e4f8;font-size:12px;outline:none;margin-bottom:7px}
+.counter-search:focus{border-color:rgba(245,158,11,0.45)}
+.counter-search::placeholder{color:#4a6a8a}
+.counter-tags{display:flex;flex-wrap:wrap;gap:4px;min-height:22px}
+.counter-quality{border-radius:7px;padding:8px 12px;font-size:12px;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.counter-quality.genuine{background:#052e16;border:1px solid rgba(34,197,94,0.3);color:#22c55e}
+.counter-quality.lukewarm{background:#1c1004;border:1px solid rgba(245,158,11,0.3);color:#f59e0b}
+.counter-quality.insulting{background:#1a0505;border:1px solid rgba(239,68,68,0.3);color:#ef4444}
+.counter-quality.neutral{background:rgba(255,255,255,0.025);border:1px solid rgba(56,98,168,0.15);color:#475569}
+.date-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.date-label{font-size:10px;color:#475569;font-family:monospace;letter-spacing:0.06em;flex-shrink:0}
+.date-input{background:#071420;border:1px solid rgba(56,98,168,0.2);border-radius:6px;
+  padding:6px 10px;color:#d0e4f8;font-size:12px;outline:none;width:140px}
+.date-input:focus{border-color:rgba(59,130,246,0.45)}
+.save-counter-btn{width:100%;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);
+  border-radius:8px;padding:10px;color:#f59e0b;font-size:13px;font-weight:700;transition:all 0.14s}
+.save-counter-btn:hover{background:rgba(245,158,11,0.25)}
+/* Log outcome section */
+.log-section-wrap{margin-top:12px;border-top:1px solid rgba(56,98,168,0.1);padding-top:12px}
+.log-toggle-btn{background:rgba(255,255,255,0.03);border:1px solid rgba(56,98,168,0.2);
+  border-radius:7px;padding:8px 16px;color:#475569;font-size:12px;font-weight:600;
+  cursor:pointer;width:100%;text-align:left;transition:all .14s;display:flex;
+  justify-content:space-between;align-items:center}
+.log-toggle-btn:hover{background:rgba(255,255,255,0.06);color:#7c9cbf}
+.log-toggle-btn.open{color:#7c9cbf;border-color:rgba(56,98,168,0.35)}
+.log-expanded{display:none;margin-top:12px;animation:fadeUp 0.2s ease}
+.log-expanded.visible{display:block}
+/* Rejection reasons */
+.reject-reasons{background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.15);
+  border-radius:8px;padding:12px;margin-top:10px}
+.reject-reasons-title{font-size:10px;font-weight:700;letter-spacing:.1em;color:#ef4444;
+  font-family:monospace;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.reject-chips{display:flex;flex-wrap:wrap;gap:6px}
+.reject-chip{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;
+  border:1px solid rgba(239,68,68,0.2);color:#94a3b8;background:rgba(255,255,255,0.03);
+  transition:all .14s;user-select:none}
+.reject-chip:hover{border-color:rgba(239,68,68,0.4);color:#fca5a5}
+.reject-chip.selected{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.5);color:#fca5a5}
+.log-save-btn{width:100%;background:#1d4ed8;border:none;border-radius:8px;padding:10px;
+  color:#fff;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;transition:opacity .14s}
+.log-save-btn:hover{opacity:.88}
+
+/* EMPTY / OFFLINE */
+.empty-state{text-align:center;padding:48px 20px}
+.empty-icon{font-size:40px;margin-bottom:16px}
+.empty-title{font-size:16px;font-weight:700;color:#64748b;margin-bottom:8px}
+.empty-sub{font-size:12px;color:#4a6a8a;line-height:1.6}
+
+/* SUBMIT MODAL */
+.overlay{position:fixed;inset:0;background:rgba(2,8,18,0.88);
+  display:flex;align-items:center;justify-content:center;z-index:500}
+.modal{background:#0d1f35;border:1px solid rgba(56,98,168,0.35);
+  border-radius:16px;padding:28px;width:440px;max-width:92vw;animation:slideUp 0.22s ease}
+.modal-header{display:flex;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:17px;font-weight:800;color:#e2eaf8}
+.modal-sub{font-size:12px;color:#475569;margin-top:3px}
+.modal-close{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+  border-radius:8px;width:32px;height:32px;color:#64748b;font-size:16px;flex-shrink:0}
+.modal-close:hover{color:#94a3b8}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.role-btn{background:rgba(255,255,255,0.025);border-radius:10px;padding:14px;
+  text-align:left;border:1px solid;transition:background 0.14s}
+.role-btn:hover{background:rgba(255,255,255,0.04)}
+.role-lbl{font-size:13px;font-weight:700;margin-bottom:5px}
+.role-desc{font-size:11px;color:#475569}
+.info-box{border-radius:8px;padding:10px 13px;font-size:11px;line-height:1.6}
+.info-purple{background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.18);color:#818cf8}
+.confirm-btn{width:100%;background:#1d4ed8;border:none;border-radius:8px;
+  padding:12px;color:#fff;font-weight:700;font-size:14px;margin-top:14px}
+.confirm-btn:hover{opacity:0.88}
+.done-wrap{text-align:center;padding:24px 0}
+.done-icon{font-size:36px;color:#22c55e;margin-bottom:12px}
+.done-title{font-size:16px;font-weight:700;color:#22c55e}
+.done-sub{font-size:13px;color:#64748b;margin-top:8px;line-height:1.6}
+
+@media(max-width:640px){
+  .builder-grid{grid-template-columns:1fr}
+  .arrow-col{display:none}
+  .controls-row{grid-template-columns:1fr}
+  .profiles-grid{grid-template-columns:1fr}
+  .result-top{flex-direction:column}
+  /* Nav: hide secondary links, keep core actions */
+  .nav-links .nav-btn:not(.active){display:none}
+  .nav-links{gap:6px}
+  /* Asset tags: allow wrapping */
+  .tags{flex-wrap:wrap}
+  .asset-tag{max-width:100%;flex-shrink:0}
+  .asset-tag-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Result card */
+  .result-card{padding:16px}
+  .gauge-section{flex-direction:column;align-items:center}
+  /* Corpus badge dots */
+  .corpus-dots{gap:4px}
+  /* Comparable trades */
+  .comp-sides{flex-direction:column;gap:3px}
+  .comp-arrow{display:none}
+  /* Manager profile card */
+  #mgr-card{padding:12px}
+}
+@media(max-width:400px){
+  .nav-links .nav-btn{display:none}
+  #analyze-connect-btn{font-size:11px;padding:5px 10px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="header">
+  <div class="logo">
+    <div class="logo-icon">⇄</div>
+    <span class="logo-text">ARC <span>Dynasty</span></span>
+    <span class="beta">BETA</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="window.location='index.html'">Home</button>
+    <button class="nav-btn" onclick="window.location='dynastyiq-vote.html'">Vote</button>
+    <button class="nav-btn active">Analyze</button>
+    <button class="nav-btn" onclick="window.location='dynastyiq-faq.html'">FAQ</button>
+    <button class="nav-btn" onclick="window.location='dynastyiq-leaderboard.html'">Leaderboard</button>
+    <div class="nav-divider"></div>
+    <span id="analyze-sleeper-badge" style="display:none;font-size:11px;color:#22c55e;
+      font-family:monospace;background:rgba(34,197,94,0.08);padding:4px 9px;border-radius:6px;
+      border:1px solid rgba(34,197,94,0.2)"></span>
+    <button id="analyze-connect-btn" style="background:#1d4ed8;border:none;border-radius:7px;
+      padding:7px 14px;color:#fff;font-size:12px;font-weight:600"
+      onclick="window.location='dynastyiq-vote.html'">
+      Connect Sleeper
+    </button>
+  </div>
+</header>
+
+<!-- SERVER STATUS BAR -->
+<div id="server-bar" style="background:rgba(8,18,35,0.7)">
+  <div class="dot dot-checking" id="server-dot"></div>
+  <span id="server-text" style="color:#475569">Checking server connection…</span>
+  <span id="server-port" style="color:#4a6a8a;font-family:monospace;margin-left:4px"></span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="page-title">Analyze a Trade</div>
+  <div class="page-sub">Enter trade assets to get acceptance probability, narrative, and comparable trades</div>
+
+  <!-- BUILDER -->
+  <div class="builder">
+    <div class="builder-grid">
+      <!-- YOU GIVE -->
+      <div>
+        <div class="side-label give">You Give</div>
+        <div class="search-wrap" id="give-wrap">
+          <input class="search-input" id="give-input" placeholder="Search player or pick…"
+            autocomplete="off" oninput="onSearch('give')" onfocus="onFocus('give')" onblur="onBlur('give')"/>
+          <div class="dropdown" id="give-drop" style="display:none"></div>
+        </div>
+        <div class="tags" id="give-tags"></div>
+      </div>
+
+      <div class="arrow-col">
+        <div class="arrow-circle">⇄</div>
+      </div>
+
+      <!-- YOU GET -->
+      <div>
+        <div class="side-label get">You Get</div>
+        <div class="search-wrap" id="get-wrap">
+          <input class="search-input" id="get-input" placeholder="Search player or pick…"
+            autocomplete="off" oninput="onSearch('get')" onfocus="onFocus('get')" onblur="onBlur('get')"/>
+          <div class="dropdown" id="get-drop" style="display:none"></div>
+        </div>
+        <div class="tags" id="get-tags"></div>
+      </div>
+    </div>
+
+    <!-- DIRECTION + MANAGER -->
+    <div class="controls-row">
+      <div class="control-block">
+        <div class="ctrl-label">Trade Direction</div>
+        <div class="toggle-row">
+          <button class="toggle-btn active-give" id="dir-send" onclick="setDirection('sent')">
+            I'm Sending This
+          </button>
+          <button class="toggle-btn" id="dir-recv" onclick="setDirection('received')">
+            I Received This
+          </button>
+        </div>
+      </div>
+      <div class="control-block">
+        <div class="ctrl-label">Trade Partner</div>
+        <div style="position:relative" id="mgr-wrap">
+          <input id="mgr-input" class="mgr-select" placeholder="Search manager…"
+            autocomplete="off"
+            oninput="filterManagers(this.value)"
+            onclick="if(!this.value) filterManagers('')"
+            onblur="setTimeout(hideMgrDrop,180)"/>
+          <div id="mgr-drop" style="display:none;position:absolute;top:100%;left:0;right:0;
+            background:#0b1a2a;border:1px solid #1e3050;border-radius:8px;margin-top:3px;
+            z-index:400;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5)">
+          </div>
+        </div>
+        <input type="hidden" id="mgr-select" value=""/>
+        <div id="mgr-selected-name" style="font-size:11px;color:#3b82f6;margin-top:4px;display:none"></div>
+        <div id="mgr-offline-note" style="font-size:10px;color:#4a6a8a;margin-top:5px;display:none">
+          Manager profiles load automatically when you connect your Sleeper account.
+        </div>
+      </div>
+    </div>
+
+    <!-- MANAGER PROFILE CARD — full width, below controls row -->
+    <div id="mgr-profile-card" style="display:none;margin-top:14px;
+      background:rgba(7,20,40,0.8);border:1px solid rgba(56,98,168,0.25);
+      border-radius:10px;padding:18px 22px"></div>
+
+    <div class="analyze-row">
+      <button id="analyze-btn" onclick="runAnalyze()" disabled>
+        Analyze Trade
+      </button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result"></div>
+</div>
+
+<!-- SUBMIT MODAL -->
+<div class="overlay" id="submit-overlay" style="display:none"
+  onclick="if(event.target===this)closeSubmit()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Submit for Community Review</div>
+        <div class="modal-sub">Add this trade to the community voting feed</div>
+      </div>
+      <button class="modal-close" onclick="closeSubmit()">✕</button>
+    </div>
+    <div id="submit-body"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// KTC SNAPSHOT (matches server.py — same naming conventions)
+// ─────────────────────────────────────────────────────────────────────────────
+const KTC_VALUES = {
+  "Josh Allen":9999,"Lamar Jackson":9650,"Jalen Hurts":8900,"Patrick Mahomes":8700,
+  "Caleb Williams":8200,"Jayden Daniels":8100,"CJ Stroud":7900,"Joe Burrow":7800,
+  "Drake Maye":7400,"Brock Purdy":7100,"Jordan Love":7000,"Trevor Lawrence":6800,
+  "Anthony Richardson":6500,"Bo Nix":6200,"Dak Prescott":5800,"Bryce Young":5500,
+  "Tua Tagovailoa":5600,"Sam Darnold":5200,"Justin Fields":4800,"Kirk Cousins":3200,
+  "Breece Hall":7200,"Bijan Robinson":7100,"Jahmyr Gibbs":7000,"De'Von Achane":6900,
+  "Kyren Williams":6100,"James Cook":5900,"Christian McCaffrey":5900,"Jonathan Taylor":6000,
+  "Saquon Barkley":5700,"Isiah Pacheco":5400,"MarShawn Lloyd":5300,"Travis Etienne":5300,
+  "Tank Bigsby":5200,"Zach Charbonnet":5100,"Tyjae Spears":5000,"Blake Corum":4700,
+  "Josh Jacobs":4800,"D'Andre Swift":4800,"Javonte Williams":4500,"Rhamondre Stevenson":4600,
+  "Tony Pollard":4200,"David Montgomery":4200,"Roschon Johnson":4400,"Brian Robinson Jr.":4000,
+  "Rachaad White":4100,"Derrick Henry":4100,"Joe Mixon":3800,"Alvin Kamara":3500,
+  "Aaron Jones":3200,"Raheem Mostert":2800,
+  "CeeDee Lamb":9400,"Ja'Marr Chase":9200,"Amon-Ra St. Brown":8200,"Garrett Wilson":7900,
+  "Malik Nabers":7800,"Justin Jefferson":7500,"Marvin Harrison Jr.":7200,"Drake London":7200,
+  "Brian Thomas Jr.":7200,"Rashee Rice":7000,"Puka Nacua":6900,"Rome Odunze":6800,
+  "Chris Olave":6700,"Zay Flowers":6600,"Tyreek Hill":6400,"Xavier Worthy":6500,
+  "Jaylen Waddle":6400,"Josh Downs":6300,"Keon Coleman":6100,"Tank Dell":6000,
+  "Jordan Addison":5900,"Tee Higgins":5800,"DeVonta Smith":5700,"DJ Moore":5500,
+  "Quentin Johnston":5200,"Michael Pittman Jr.":5000,"DK Metcalf":5000,
+  "Khalil Shakir":4800,"Deebo Samuel":4100,"Courtland Sutton":3900,"Calvin Ridley":3800,
+  "Mike Evans":3600,"Cooper Kupp":3600,"Davante Adams":3200,"Darnell Mooney":2800,
+  "Tyler Lockett":2700,"Stefon Diggs":2600,"Diontae Johnson":2200,"Michael Wilson":2400,
+  "Brock Bowers":8200,"Trey McBride":6800,"Sam LaPorta":5200,"Tucker Kraft":5000,
+  "TJ Hockenson":4800,"Mark Andrews":5000,"Travis Kelce":4800,"Jake Ferguson":5200,
+  "George Kittle":4600,"Isaiah Likely":5000,"Cole Kmet":4200,"Dalton Kincaid":4200,
+  "Evan Engram":4000,"Pat Freiermuth":4000,"Michael Mayer":4000,"Cade Otton":3800,
+  "Jelani Woods":3500,"Dalton Schultz":2800,
+  "2026 1st Early":6200,"2026 1st Mid":4200,"2026 1st Late":3000,
+  "2026 2nd Early":4100,"2026 2nd Mid":3100,"2026 2nd Late":2400,
+  "2026 3rd Early":2300,"2026 3rd Mid":1900,"2026 3rd Late":1500,
+  "2026 4th Early":1400,"2026 4th Mid":1100,"2026 4th Late":800,
+  "2027 1st Early":6200,"2027 1st Mid":5615,"2027 1st Late":4400,
+  "2027 2nd Early":4200,"2027 2nd Mid":3448,"2027 2nd Late":2700,
+  "2027 3rd Early":2100,"2027 3rd Mid":1700,"2027 3rd Late":1300,
+  "2027 4th Early":1000,"2027 4th Mid":800,"2027 4th Late":580,
+  "2028 1st Early":5200,"2028 1st Mid":4100,"2028 1st Late":3000,
+  "2028 2nd Early":3400,"2028 2nd Mid":2800,"2028 2nd Late":2200,
+  "2028 3rd Early":1700,"2028 3rd Mid":1400,"2028 3rd Late":1050,
+  "2028 4th Early":800,"2028 4th Mid":620,"2028 4th Late":450,
+};
+
+const POS_MAP = {
+  "Josh Allen":"QB","Lamar Jackson":"QB","Jalen Hurts":"QB","Patrick Mahomes":"QB",
+  "Caleb Williams":"QB","Jayden Daniels":"QB","CJ Stroud":"QB","Joe Burrow":"QB",
+  "Drake Maye":"QB","Brock Purdy":"QB","Jordan Love":"QB","Trevor Lawrence":"QB",
+  "Anthony Richardson":"QB","Bo Nix":"QB","Dak Prescott":"QB","Bryce Young":"QB",
+  "Tua Tagovailoa":"QB","Sam Darnold":"QB","Justin Fields":"QB","Kirk Cousins":"QB",
+  "Breece Hall":"RB","Bijan Robinson":"RB","Jahmyr Gibbs":"RB","De'Von Achane":"RB",
+  "Kyren Williams":"RB","James Cook":"RB","Christian McCaffrey":"RB","Jonathan Taylor":"RB",
+  "Saquon Barkley":"RB","Isiah Pacheco":"RB","MarShawn Lloyd":"RB","Travis Etienne":"RB",
+  "Tank Bigsby":"RB","Zach Charbonnet":"RB","Tyjae Spears":"RB","Blake Corum":"RB",
+  "Josh Jacobs":"RB","D'Andre Swift":"RB","Javonte Williams":"RB","Rhamondre Stevenson":"RB",
+  "Tony Pollard":"RB","David Montgomery":"RB","Roschon Johnson":"RB","Brian Robinson Jr.":"RB",
+  "Rachaad White":"RB","Derrick Henry":"RB","Joe Mixon":"RB","Alvin Kamara":"RB",
+  "Aaron Jones":"RB","Raheem Mostert":"RB",
+  "CeeDee Lamb":"WR","Ja'Marr Chase":"WR","Amon-Ra St. Brown":"WR","Garrett Wilson":"WR",
+  "Malik Nabers":"WR","Justin Jefferson":"WR","Marvin Harrison Jr.":"WR","Drake London":"WR",
+  "Brian Thomas Jr.":"WR","Rashee Rice":"WR","Puka Nacua":"WR","Rome Odunze":"WR",
+  "Chris Olave":"WR","Zay Flowers":"WR","Tyreek Hill":"WR","Xavier Worthy":"WR",
+  "Jaylen Waddle":"WR","Josh Downs":"WR","Keon Coleman":"WR","Tank Dell":"WR",
+  "Jordan Addison":"WR","Tee Higgins":"WR","DeVonta Smith":"WR","DJ Moore":"WR",
+  "Quentin Johnston":"WR","Michael Pittman Jr.":"WR","DK Metcalf":"WR",
+  "Khalil Shakir":"WR","Deebo Samuel":"WR","Courtland Sutton":"WR","Calvin Ridley":"WR",
+  "Mike Evans":"WR","Cooper Kupp":"WR","Davante Adams":"WR","Darnell Mooney":"WR",
+  "Tyler Lockett":"WR","Stefon Diggs":"WR","Diontae Johnson":"WR","Michael Wilson":"WR",
+  "Brock Bowers":"TE","Trey McBride":"TE","Sam LaPorta":"TE","Tucker Kraft":"TE",
+  "TJ Hockenson":"TE","Mark Andrews":"TE","Travis Kelce":"TE","Jake Ferguson":"TE",
+  "George Kittle":"TE","Isaiah Likely":"TE","Cole Kmet":"TE","Dalton Kincaid":"TE",
+  "Evan Engram":"TE","Pat Freiermuth":"TE","Michael Mayer":"TE","Cade Otton":"TE",
+  "Jelani Woods":"TE","Dalton Schultz":"TE",
+};
+const ALL_NAMES = Object.keys(KTC_VALUES).sort();
+function getPos(name){
+  if(/^\d{4}/.test(name)) return "PICK";
+  // Check live playerMeta first (populated from server.py /player-meta — most accurate)
+  if(typeof playerMeta !== "undefined" && playerMeta[name]?.pos) return playerMeta[name].pos;
+  // Fall back to local PLAYER_META snapshot
+  if(typeof PLAYER_META !== "undefined" && PLAYER_META[name]?.pos) return PLAYER_META[name].pos;
+  // Then POS_MAP, then default to WR
+  return POS_MAP[name] || "WR";
+}
+const POS_CLR  = {QB:"#818cf8",WR:"#34d399",RB:"#fb923c",TE:"#f472b6",PICK:"#94a3b8"};
+
+const PLAYER_META = {
+  "Josh Allen":{pos:"QB",age:29.0},
+  "Lamar Jackson":{pos:"QB",age:28.0},
+  "Jalen Hurts":{pos:"QB",age:26.0},
+  "Patrick Mahomes":{pos:"QB",age:29.0},
+  "Caleb Williams":{pos:"QB",age:23.0},
+  "Jayden Daniels":{pos:"QB",age:24.0},
+  "CJ Stroud":{pos:"QB",age:23.0},
+  "Drake Maye":{pos:"QB",age:22.0},
+  "Joe Burrow":{pos:"QB",age:28.0},
+  "Jordan Love":{pos:"QB",age:26.0},
+  "Trevor Lawrence":{pos:"QB",age:25.0},
+  "Anthony Richardson":{pos:"QB",age:23.0},
+  "Brock Purdy":{pos:"QB",age:25.0},
+  "Bo Nix":{pos:"QB",age:24.0},
+  "Sam Darnold":{pos:"QB",age:27.0},
+  "Dak Prescott":{pos:"QB",age:31.0},
+  "Bryce Young":{pos:"QB",age:23.0},
+  "Tua Tagovailoa":{pos:"QB",age:27.0},
+  "Justin Fields":{pos:"QB",age:26.0},
+  "Kirk Cousins":{pos:"QB",age:37.0},
+  "Michael Penix Jr.":{pos:"QB",age:25.0},
+  "Will Levis":{pos:"QB",age:26.0},
+  "Malik Willis":{pos:"QB",age:26.0},
+  "Breece Hall":{pos:"RB",age:24.0},
+  "Bijan Robinson":{pos:"RB",age:23.0},
+  "Jahmyr Gibbs":{pos:"RB",age:23.0},
+  "De'Von Achane":{pos:"RB",age:23.0},
+  "James Cook":{pos:"RB",age:24.0},
+  "Christian McCaffrey":{pos:"RB",age:28.0},
+  "Kyren Williams":{pos:"RB",age:24.0},
+  "Saquon Barkley":{pos:"RB",age:28.0},
+  "Jonathan Taylor":{pos:"RB",age:26.0},
+  "Travis Etienne":{pos:"RB",age:25.0},
+  "Tank Bigsby":{pos:"RB",age:23.0},
+  "MarShawn Lloyd":{pos:"RB",age:22.0},
+  "Tyjae Spears":{pos:"RB",age:24.0},
+  "Zach Charbonnet":{pos:"RB",age:24.0},
+  "Blake Corum":{pos:"RB",age:23.0},
+  "Roschon Johnson":{pos:"RB",age:23.0},
+  "D'Andre Swift":{pos:"RB",age:26.0},
+  "Rhamondre Stevenson":{pos:"RB",age:26.0},
+  "Josh Jacobs":{pos:"RB",age:26.0},
+  "Isiah Pacheco":{pos:"RB",age:25.0},
+  "Rachaad White":{pos:"RB",age:26.0},
+  "Brian Robinson Jr.":{pos:"RB",age:25.0},
+  "Javonte Williams":{pos:"RB",age:24.0},
+  "Tony Pollard":{pos:"RB",age:28.0},
+  "David Montgomery":{pos:"RB",age:28.0},
+  "Alvin Kamara":{pos:"RB",age:30.0},
+  "Joe Mixon":{pos:"RB",age:29.0},
+  "Derrick Henry":{pos:"RB",age:31.0},
+  "Aaron Jones":{pos:"RB",age:30.0},
+  "Raheem Mostert":{pos:"RB",age:33.0},
+  "Kenneth Walker III":{pos:"RB",age:25.0},
+  "Chuba Hubbard":{pos:"RB",age:26.0},
+  "Jaleel McLaughlin":{pos:"RB",age:25.0},
+  "Keaton Mitchell":{pos:"RB",age:24.0},
+  "Kaleb Johnson":{pos:"RB",age:22.0},
+  "Ashton Jeanty":{pos:"RB",age:21.0},
+  "Omarion Hampton":{pos:"RB",age:21.0},
+  "RJ Harvey":{pos:"RB",age:24.0},
+  "Quinshon Judkins":{pos:"RB",age:22.0},
+  "Dylan Sampson":{pos:"RB",age:22.0},
+  "Cam Skattebo":{pos:"RB",age:23.0},
+  "Justin Jefferson":{pos:"WR",age:26.0},
+  "CeeDee Lamb":{pos:"WR",age:26.0},
+  "Ja'Marr Chase":{pos:"WR",age:25.0},
+  "Amon-Ra St. Brown":{pos:"WR",age:25.0},
+  "Malik Nabers":{pos:"WR",age:22.0},
+  "Marvin Harrison Jr.":{pos:"WR",age:23.0},
+  "Garrett Wilson":{pos:"WR",age:25.0},
+  "Drake London":{pos:"WR",age:23.0},
+  "Brian Thomas Jr.":{pos:"WR",age:22.0},
+  "Rashee Rice":{pos:"WR",age:24.0},
+  "Rome Odunze":{pos:"WR",age:23.0},
+  "Puka Nacua":{pos:"WR",age:24.0},
+  "Zay Flowers":{pos:"WR",age:24.0},
+  "Tyreek Hill":{pos:"WR",age:31.0},
+  "Xavier Worthy":{pos:"WR",age:22.0},
+  "Jaylen Waddle":{pos:"WR",age:26.0},
+  "Josh Downs":{pos:"WR",age:23.0},
+  "Tank Dell":{pos:"WR",age:24.0},
+  "Keon Coleman":{pos:"WR",age:22.0},
+  "Jordan Addison":{pos:"WR",age:23.0},
+  "Chris Olave":{pos:"WR",age:25.0},
+  "Tee Higgins":{pos:"WR",age:26.0},
+  "DeVonta Smith":{pos:"WR",age:27.0},
+  "DJ Moore":{pos:"WR",age:28.0},
+  "Ladd McConkey":{pos:"WR",age:23.0},
+  "Tetairoa McMillan":{pos:"WR",age:22.0},
+  "Emeka Egbuka":{pos:"WR",age:23.0},
+  "Luther Burden III":{pos:"WR",age:22.0},
+  "Matthew Golden":{pos:"WR",age:22.0},
+  "Tre Harris":{pos:"WR",age:23.0},
+  "Quentin Johnston":{pos:"WR",age:23.0},
+  "Michael Pittman Jr.":{pos:"WR",age:27.0},
+  "DK Metcalf":{pos:"WR",age:27.0},
+  "Deebo Samuel":{pos:"WR",age:29.0},
+  "Calvin Ridley":{pos:"WR",age:30.0},
+  "Cooper Kupp":{pos:"WR",age:32.0},
+  "Courtland Sutton":{pos:"WR",age:30.0},
+  "Mike Evans":{pos:"WR",age:32.0},
+  "Davante Adams":{pos:"WR",age:32.0},
+  "Stefon Diggs":{pos:"WR",age:31.0},
+  "Tyler Lockett":{pos:"WR",age:33.0},
+  "Adam Thielen":{pos:"WR",age:35.0},
+  "Darnell Mooney":{pos:"WR",age:27.0},
+  "Khalil Shakir":{pos:"WR",age:25.0},
+  "Michael Wilson":{pos:"WR",age:24.0},
+  "Diontae Johnson":{pos:"WR",age:28.0},
+  "Allen Lazard":{pos:"WR",age:29.0},
+  "Brock Bowers":{pos:"TE",age:22.0},
+  "Trey McBride":{pos:"TE",age:25.0},
+  "Sam LaPorta":{pos:"TE",age:24.0},
+  "Tucker Kraft":{pos:"TE",age:24.0},
+  "Juwan Johnson":{pos:"TE",age:28.0},
+  "Oronde Gadsden II":{pos:"TE",age:23.0},
+  "Kyle Pitts":{pos:"TE",age:25.0},
+  "Ja'Tavion Sanders":{pos:"TE",age:24.0},
+  "Dalton Kincaid":{pos:"TE",age:25.0},
+  "TJ Hockenson":{pos:"TE",age:27.0},
+  "Mark Andrews":{pos:"TE",age:30.0},
+  "Travis Kelce":{pos:"TE",age:36.0},
+  "Jake Ferguson":{pos:"TE",age:25.0},
+  "George Kittle":{pos:"TE",age:31.0},
+  "Isaiah Likely":{pos:"TE",age:25.0},
+  "Cole Kmet":{pos:"TE",age:26.0},
+  "Evan Engram":{pos:"TE",age:31.0},
+  "Pat Freiermuth":{pos:"TE",age:27.0},
+  "Michael Mayer":{pos:"TE",age:23.0},
+  "Cade Otton":{pos:"TE",age:26.0},
+  "Dalton Schultz":{pos:"TE",age:29.0},
+  "Jelani Woods":{pos:"TE",age:25.0},
+  "Mason Taylor":{pos:"TE",age:22.0},
+  "Colston Loveland":{pos:"TE",age:22.0},
+  "Harold Fannin Jr.":{pos:"TE",age:22.0},
+  "Theo Johnson":{pos:"TE",age:23.0},
+  "Will Shipley":{pos:"RB",age:23.0},
+  "Jermiya Love":{pos:"RB",age:20.0},
+  "Kaleb Johnson":{pos:"RB",age:22.0},
+  "Ashton Jeanty":{pos:"RB",age:21.0},
+  "Omarion Hampton":{pos:"RB",age:21.0},
+  "RJ Harvey":{pos:"RB",age:24.0},
+  "Quinshon Judkins":{pos:"RB",age:22.0},
+  "Dylan Sampson":{pos:"RB",age:22.0},
+  "Cam Skattebo":{pos:"RB",age:23.0},
+  "TreVeyon Henderson":{pos:"RB",age:23.0},
+  "Jonathon Brooks":{pos:"RB",age:22.0},
+  "Antonio Williams":{pos:"WR",age:21.0},
+  "George Pickens":{pos:"WR",age:24.0},
+  "Jaxon Smith-Njigba":{pos:"WR",age:22.0},
+  "Jameson Williams":{pos:"WR",age:23.0},
+  "Jayden Reed":{pos:"WR",age:24.0},
+  "Rashid Shaheed":{pos:"WR",age:25.0},
+  "Dontayvion Wicks":{pos:"WR",age:23.0},
+  "Christian Kirk":{pos:"WR",age:29.0},
+  "Wan'Dale Robinson":{pos:"WR",age:25.0},
+  "KaVontae Turpin":{pos:"WR",age:29.0},
+  "Greg Dortch":{pos:"WR",age:27.0},
+  "Parker Washington":{pos:"WR",age:23.0},
+  "Jalen Coker":{pos:"WR",age:24.0},
+  "Jaylin Noel":{pos:"WR",age:22.0},
+  "Savion Williams":{pos:"WR",age:22.0},
+  "Jack Bech":{pos:"WR",age:22.0},
+  "Dont'e Thornton":{pos:"WR",age:23.0},
+  "Jaxon Dart":{pos:"QB",age:22.0},
+  "Jalen Milroe":{pos:"QB",age:23.0},
+  "Shedeur Sanders":{pos:"QB",age:23.0},
+  "Cam Ward":{pos:"QB",age:24.0},
+  "Kyler Murray":{pos:"QB",age:27.0},
+  "Geno Smith":{pos:"QB",age:34.0},
+  "Mason Rudolph":{pos:"QB",age:29.0},
+  "AJ Barner":{pos:"TE",age:23.0},
+  "Aaron Rodgers":{pos:"QB",age:42.0},
+  "Adonai Mitchell":{pos:"WR",age:22.0},
+  "Ainias Smith":{pos:"WR",age:24.0},
+  "Andrei Iosivas":{pos:"WR",age:25.0},
+  "Baker Mayfield":{pos:"QB",age:30.0},
+  "Ben Sinnott":{pos:"TE",age:23.0},
+  "Bhayshul Tuten":{pos:"RB",age:23.0},
+  "Braelon Allen":{pos:"RB",age:21.0},
+  "Brandon Aiyuk":{pos:"WR",age:27.0},
+  "Brashard Smith":{pos:"WR",age:22.0},
+  "Brenton Strange":{pos:"TE",age:25.0},
+  "Bucky Irving":{pos:"RB",age:23.0},
+  "Cade Stover":{pos:"TE",age:25.0},
+  "Calvin Austin III":{pos:"WR",age:26.0},
+  "Carnell Tate":{pos:"WR",age:20.0},
+  "Carson Wentz":{pos:"QB",age:33.0},
+  "Cedric Tillman":{pos:"WR",age:25.0},
+  "Chase Brown":{pos:"RB",age:24.0},
+  "Chigoziem Okonkwo":{pos:"TE",age:27.0},
+  "Chimere Dike":{pos:"WR",age:23.0},
+  "Chris Bell":{pos:"WR",age:22.0},
+  "Chris Godwin":{pos:"WR",age:29.0},
+  "Chris Rodriguez":{pos:"RB",age:25.0},
+  "Christian Watson":{pos:"WR",age:26.0},
+  "Colby Parkinson":{pos:"TE",age:27.0},
+  "Dallas Goedert":{pos:"TE",age:30.0},
+  "Darnell Washington":{pos:"TE",age:23.0},
+  "David Njoku":{pos:"TE",age:28.0},
+  "Davis Mills":{pos:"QB",age:26.0},
+  "Dawson Knox":{pos:"TE",age:29.0},
+  "Demario Douglas":{pos:"WR",age:25.0},
+  "Denzel Boston":{pos:"WR",age:22.0},
+  "Devaughn Vele":{pos:"WR",age:25.0},
+  "Devin Neal":{pos:"RB",age:23.0},
+  "Devin Singletary":{pos:"RB",age:28.0},
+  "Dillon Gabriel":{pos:"QB",age:24.0},
+  "Drew Lock":{pos:"QB",age:28.0},
+  "Eli Stowers":{pos:"TE",age:24.0},
+  "Elic Ayomanor":{pos:"WR",age:22.0},
+  "Elijah Arroyo":{pos:"TE",age:23.0},
+  "Emmett Johnson":{pos:"RB",age:23.0},
+  "Fernando Mendoza":{pos:"QB",age:22.0},
+  "Gardner Minshew":{pos:"QB",age:28.0},
+  "Garrett Nussmeier":{pos:"QB",age:23.0},
+  "Germie Bernard":{pos:"WR",age:22.0},
+  "Hunter Henry":{pos:"TE",age:30.0},
+  "Isaac Guerendo":{pos:"RB",age:25.0},
+  "Isaac TeSlaa":{pos:"WR",age:24.0},
+  "Isaiah Bond":{pos:"WR",age:22.0},
+  "Isaiah Davis":{pos:"RB",age:23.0},
+  "J.J. McCarthy":{pos:"QB",age:22.0},
+  "J.K. Dobbins":{pos:"RB",age:26.0},
+  "Ja'Lynn Polk":{pos:"WR",age:23.0},
+  "Jacoby Brissett":{pos:"QB",age:31.0},
+  "Jacory Croskey-Merritt":{pos:"RB",age:22.0},
+  "Jadarian Price":{pos:"RB",age:22.0},
+  "Jahan Dotson":{pos:"WR",age:25.0},
+  "Jake Browning":{pos:"QB",age:28.0},
+  "Jake Tonges":{pos:"TE",age:24.0},
+  "Jakobi Meyers":{pos:"WR",age:29.0},
+  "Jalen McMillan":{pos:"WR",age:23.0},
+  "Jalen Royals":{pos:"WR",age:23.0},
+  "Jameis Winston":{pos:"QB",age:31.0},
+  "Jared Goff":{pos:"QB",age:31.0},
+  "Jared Wiley":{pos:"TE",age:23.0},
+  "Jayden Higgins":{pos:"WR",age:22.0},
+  "Jaylen Warren":{pos:"RB",age:26.0},
+  "Jaylen Wright":{pos:"WR",age:23.0},
+  "Jaylin Lane":{pos:"WR",age:22.0},
+  "Joe Milton":{pos:"QB",age:25.0},
+  "John Metchie":{pos:"WR",age:24.0},
+  "Jonah Coleman":{pos:"TE",age:22.0},
+  "Jordan James":{pos:"RB",age:21.0},
+  "Jordan Mason":{pos:"RB",age:26.0},
+  "Jordyn Tyson":{pos:"WR",age:22.0},
+  "Justin Herbert":{pos:"QB",age:27.0},
+  "KC Concepcion":{pos:"WR",age:22.0},
+  "Kayshon Boutte":{pos:"WR",age:23.0},
+  "Kaytron Allen":{pos:"RB",age:21.0},
+  "Kendre Miller":{pos:"RB",age:23.0},
+  "Kenneth Gainwell":{pos:"RB",age:25.0},
+  "Kenny Pickett":{pos:"QB",age:27.0},
+  "Kimani Vidal":{pos:"RB",age:23.0},
+  "Kyle Monangai":{pos:"RB",age:23.0},
+  "LeQuint Allen":{pos:"RB",age:22.0},
+  "Luke Musgrave":{pos:"TE",age:25.0},
+  "Mac Jones":{pos:"QB",age:27.0},
+  "Makai Lemon":{pos:"WR",age:21.0},
+  "Malachi Fields":{pos:"WR",age:24.0},
+  "Marcus Mariota":{pos:"QB",age:32.0},
+  "Marquise Brown":{pos:"WR",age:30.0},
+  "Marvin Mims":{pos:"WR",age:23.0},
+  "Mason Taylor":{pos:"TE",age:22.0},
+  "Matthew Stafford":{pos:"QB",age:38.0},
+  "Mike Washington Jr.":{pos:"WR",age:23.0},
+  "Mitchell Evans":{pos:"TE",age:23.0},
+  "Najee Harris":{pos:"RB",age:27.0},
+  "Nicholas Singleton":{pos:"RB",age:22.0},
+  "Nico Collins":{pos:"WR",age:26.0},
+  "Noah Gray":{pos:"TE",age:27.0},
+  "Ollie Gordon":{pos:"RB",age:22.0},
+  "Omar Cooper Jr.":{pos:"WR",age:22.0},
+  "Pat Bryant":{pos:"WR",age:23.0},
+  "Quinn Ewers":{pos:"QB",age:22.0},
+  "Rashod Bateman":{pos:"WR",age:25.0},
+  "Ray Davis":{pos:"RB",age:24.0},
+  "Ricky Pearsall":{pos:"WR",age:24.0},
+  "Rico Dowdle":{pos:"RB",age:28.0},
+  "Roman Wilson":{pos:"WR",age:23.0},
+  "Romeo Doubs":{pos:"WR",age:25.0},
+  "Ryan Flournoy":{pos:"WR",age:23.0},
+  "Sean Tucker":{pos:"RB",age:24.0},
+  "Spencer Rattler":{pos:"QB",age:25.0},
+  "Tai Felton":{pos:"WR",age:22.0},
+  "Terrance Ferguson":{pos:"TE",age:23.0},
+  "Terry McLaurin":{pos:"WR",age:30.0},
+  "Tez Johnson":{pos:"WR",age:23.0},
+  "Tory Horton":{pos:"WR",age:24.0},
+  "Travis Hunter":{pos:"WR",age:21.0},
+  "Trey Benson":{pos:"RB",age:23.0},
+  "Trey Palmer":{pos:"WR",age:24.0},
+  "Treylon Burks":{pos:"WR",age:25.0},
+  "Troy Franklin":{pos:"WR",age:23.0},
+  "Tutu Atwell":{pos:"WR",age:25.0},
+  "Ty Simpson":{pos:"QB",age:23.0},
+  "Tyler Allgeier":{pos:"RB",age:25.0},
+  "Tyler Shough":{pos:"QB",age:26.0},
+  "Tyler Warren":{pos:"TE",age:23.0},
+  "Tyrod Taylor":{pos:"QB",age:36.0},
+  "Tyrone Tracy":{pos:"RB",age:25.0},
+  "Will Howard":{pos:"QB",age:23.0},
+  "Woody Marks":{pos:"RB",age:24.0},
+  "Xavier Legette":{pos:"WR",age:23.0},
+  "Zachariah Branch":{pos:"WR",age:21.0}
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+const API = "https://arc-two-mu.vercel.app/api";
+let serverOnline = false;
+let direction = "sent";       // "sent" | "received"
+let giveSide  = [];           // array of names
+let getSide   = [];
+let playerMeta = {...PLAYER_META}; // name → {age, pos} — updated from server on connect
+let managers  = [];
+let lastResult = null;
+let logState   = {};          // trade id → "accepted"|"rejected"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVER CHECK
+// ─────────────────────────────────────────────────────────────────────────────
+async function checkServer(){
+  // Use manual timeout instead of AbortSignal.timeout() for browser compatibility
+  function fetchWithTimeout(url, ms) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('timeout')), ms);
+      fetch(url).then(r => { clearTimeout(timer); resolve(r); })
+                .catch(e => { clearTimeout(timer); reject(e); });
+    });
+  }
+  try {
+    const r = await fetchWithTimeout(API+"/health", 5000);
+    if(r.ok){
+      const data = await r.json();
+      if(data.python === "online" || data.python === "ok") {
+        serverOnline = true;
+        setServerStatus("online", "Full analysis active", "Live analysis · behavioral signals active");
+        loadKtcValues();  // fetch live player values immediately on connect
+        const connectedUser = localStorage.getItem('diq_sleeper_user');
+        loadManagers(connectedUser);
+        return;
+      } else {
+        serverOnline = false;
+        setServerStatus("offline",
+          "Limited mode — KTC value analysis only. Connect Sleeper for full behavioral analysis.",
+          "KTC values only");
+        showOfflineNote();
+        return;
+      }
+    }
+  } catch(e) {}
+  // Health check failed or timed out — enter demo mode immediately
+  serverOnline = false;
+  setServerStatus("offline",
+    "Limited mode — running on KTC values only.",
+    "API unreachable");
+  showOfflineNote();
+}
+function setServerStatus(state, text, port){
+  const dot  = document.getElementById("server-dot");
+  const txt  = document.getElementById("server-text");
+  const prt  = document.getElementById("server-port");
+  dot.className = "dot dot-"+state;
+  txt.textContent = text;
+  txt.style.color = state==="online"?"#22c55e":state==="offline"?"#ef4444":"#475569";
+  prt.textContent = port||"";
+}
+function showOfflineNote(){
+  document.getElementById("mgr-offline-note").style.display = "block";
+}
+async function loadKtcValues(){
+  // Fetch live KTC values — replaces hardcoded snapshot with Railway live data
+  // Runs regardless of Sleeper connection status
+  try {
+    const dId = localStorage.getItem("diq_device_id") || "anonymous";
+    const r = await fetch(API+"/players?device_id="+dId,{signal:AbortSignal.timeout(10000)});
+    const data = await r.json();
+    if(data && typeof data==="object" && !data.error && Object.keys(data).length > 100){
+      Object.assign(KTC_VALUES, data);
+      ALL_NAMES.length = 0;
+      ALL_NAMES.push(...Object.keys(KTC_VALUES).sort());
+      renderTags("give");
+      renderTags("get");
+    }
+  } catch(e){}
+}
+
+async function loadManagers(username){
+  try {
+    // Only load managers if a Sleeper user is connected — scoped to their leagues
+    if(!username){
+      showManagerConnectPrompt();
+      return;
+    }
+
+    const deviceId = localStorage.getItem("diq_device_id") || "anonymous";
+    const r = await fetch(API+"/managers?username="+encodeURIComponent(username)+"&device_id="+deviceId,{signal:AbortSignal.timeout(10000)});
+    const data = await r.json();
+    // New endpoint returns an array; legacy server.py returned an object — handle both
+    managers = Array.isArray(data)
+      ? data.filter(m => m && m.display_name)
+      : Object.values(data||{}).filter(m => m && m.display_name);
+
+    // Fetch live player ages from server
+    try {
+      const dId = localStorage.getItem("diq_device_id") || "anonymous";
+      const mr = await fetch(API+"/player-meta?device_id="+dId,{signal:AbortSignal.timeout(8000)});
+      const md = await mr.json();
+      if(md && !md.error) playerMeta = {...PLAYER_META, ...md};
+    } catch(e) {}
+
+    if(managers.length > 0){
+      const prt = document.getElementById("server-port");
+      const teamMgrs = managers.filter(m => m.profile_type === "team" || m.profile_type === "stub");
+      if(prt) prt.textContent = "Live analysis active · "+teamMgrs.length+" manager profiles loaded";
+    }
+    filterManagers("");
+  } catch(e){
+    console.error("loadManagers failed:", e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEARCH / TAGS
+// ─────────────────────────────────────────────────────────────────────────────
+let blurTimers = {};
+
+function onSearch(side){
+  const q = document.getElementById(side+"-input").value.trim();
+  const drop = document.getElementById(side+"-drop");
+  if(q.length < 2){ drop.style.display="none"; return; }
+  const selected = side==="give" ? giveSide : getSide;
+  const matches = ALL_NAMES.filter(n => {
+    if(!n.toLowerCase().includes(q.toLowerCase())) return false;
+    if(/^\d{4}/.test(n)) return true; // picks can repeat
+    return !selected.includes(n);
+  }).slice(0,25);
+  if(!matches.length){ drop.style.display="none"; return; }
+  drop.innerHTML = matches.map(n => {
+    const clr = POS_CLR[getPos(n)]||"#94a3b8";
+    const isPick = /^\d{4}/.test(n);
+    const meta = !isPick ? playerMeta[n] : null;
+    const ageStr = meta?.age != null ? meta.age.toFixed(1)+' yrs' : null;
+    return `<div class="dropdown-item" onmousedown="addAsset('${side}','${n.replace(/'/g,"\\'")}')">
+      <span>${n}${meta ? `<span style="color:#64748b;font-size:10px;margin-left:5px">${meta.pos}${ageStr?' · '+ageStr:''}</span>` : ''}</span>
+      <span class="dropdown-val" style="color:${clr}">${(KTC_VALUES[n]||0).toLocaleString()}</span>
+    </div>`;
+  }).join("");
+  drop.style.display="block";
+}
+function onFocus(side){
+  clearTimeout(blurTimers[side]);
+}
+function onBlur(side){
+  blurTimers[side] = setTimeout(()=>{
+    document.getElementById(side+"-drop").style.display="none";
+  }, 180);
+}
+function addAsset(side, name){
+  const arr = side==="give" ? giveSide : getSide;
+  arr.push(name);
+  document.getElementById(side+"-input").value="";
+  document.getElementById(side+"-drop").style.display="none";
+  renderTags(side);
+  updateAnalyzeBtn();
+}
+function removeAsset(side, name){
+  const arr = side==="give" ? giveSide : getSide;
+  const idx = arr.lastIndexOf(name);
+  if(idx!==-1) arr.splice(idx,1);
+  renderTags(side);
+  updateAnalyzeBtn();
+}
+function renderTags(side){
+  const arr = side==="give" ? giveSide : getSide;
+  const el  = document.getElementById(side+"-tags");
+  // collapse duplicates
+  const collapsed = arr.reduce((acc,n)=>{
+    const ex=acc.find(x=>x.n===n); ex?ex.q++:acc.push({n,q:1}); return acc;
+  },[]);
+  el.innerHTML = collapsed.map(({n,q})=>{
+    const pos = getPos(n);
+    const clr = POS_CLR[pos]||"#94a3b8";
+    const val = (KTC_VALUES[n]||0)*q;
+    const isPick = /^\d{4}/.test(n);
+    const meta = !isPick ? playerMeta[n] : null;
+    const ageStr = meta?.age != null ? meta.age.toFixed(1)+' yrs' : null;
+    return `<div class="asset-tag" style="background:${clr}11;border-color:${clr}33">
+      <span class="asset-tag-pos" style="color:${clr};background:${clr}18">${pos}</span>
+      ${q>1?`<span style="font-size:9px;color:${clr};font-weight:700;font-family:monospace">${q}×</span>`:""}
+      <span class="asset-tag-name">${n}</span>
+      ${meta ? `<span style="color:#4a6a8a;font-size:10px;white-space:nowrap">${meta.pos}${ageStr?' · '+ageStr:''}</span>` : ''}
+      <span class="asset-tag-val" style="color:${clr}">${val.toLocaleString()}</span>
+      <span class="asset-tag-rm" onclick="removeAsset('${side}','${n.replace(/'/g,"\\'")}')">×</span>
+    </div>`;
+  }).join("");
+}
+function updateAnalyzeBtn(){
+  const ok = giveSide.length>0 && getSide.length>0;
+  document.getElementById("analyze-btn").disabled = !ok;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DIRECTION
+// ─────────────────────────────────────────────────────────────────────────────
+function setDirection(d){
+  direction = d;
+  document.getElementById("dir-send").className =
+    "toggle-btn"+(d==="sent"?" active-give":"");
+  document.getElementById("dir-recv").className =
+    "toggle-btn"+(d==="received"?" active-receive":"");
+
+  // Swap YOU GIVE / YOU GET labels to reflect perspective
+  // "I'm Sending This" → You Give / You Get (your perspective)
+  // "I Received This"  → They Give / They Want (receiver's perspective, labels flip)
+  const giveLabel = document.querySelector(".side-label.give");
+  const getLabel  = document.querySelector(".side-label.get");
+  if(giveLabel && getLabel) {
+    if(d === "received") {
+      giveLabel.textContent = "They Give";
+      getLabel.textContent  = "They Want";
+    } else {
+      giveLabel.textContent = "You Give";
+      getLabel.textContent  = "You Get";
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANALYZE
+// ─────────────────────────────────────────────────────────────────────────────
+async function runAnalyze(){
+  if(giveSide.length===0||getSide.length===0) return;
+  const btn = document.getElementById("analyze-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>Analyzing…';
+
+  // Build API payload — apply direction flip
+  let sending   = [...giveSide];
+  let receiving = [...getSide];
+  if(direction==="received"){
+    [sending,receiving] = [receiving,sending];
+  }
+  const mgrVal  = document.getElementById("mgr-select").value;
+  // selectedMgrObj is set by selectManager(); mgrVal is the display_name string
+  const mgrObj  = selectedMgrObj || (mgrVal ? managers.find(m => m.display_name === mgrVal) : null);
+  const mgrName = mgrObj ? mgrObj.display_name : (mgrVal || null);
+
+  const payload = {
+    sending,
+    receiving,
+    trade_direction: direction,
+    their_manager:  direction === "received" ? null       : mgrName,
+    sender_manager: direction === "received" ? mgrName   : null,
+    device_id:      localStorage.getItem("diq_device_id") || "anonymous",
+  };
+  if(mgrVal) payload.their_roster_id = parseInt(mgrVal)||mgrVal;
+
+  let result = null;
+  if(serverOnline){
+    try {
+      const r = await fetch(API+"/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload),
+        signal:AbortSignal.timeout(30000),  // corpus search can take 15-25s
+      });
+      result = await r.json();
+      // If server returned an error object, surface it rather than silently going demo
+      if(result && result.error){
+        console.error("Server returned error:", result.error);
+        result = buildDemoResult(sending, receiving);
+      }
+    } catch(e){
+      console.error("Analyze fetch failed:", e.message||e);
+      // Check if this was a timeout specifically
+      const isTimeout = e.name === "AbortError" || e.message?.includes("timeout");
+      result = buildDemoResult(sending, receiving);
+      if(isTimeout){
+        result.narrative = [
+          {icon:"⏱️", text:"Analysis is taking longer than usual — our model is processing. Try again in a few seconds.", sentiment:"neutral"},
+          ...result.narrative,
+        ];
+      }
+    }
+  } else {
+    await new Promise(r=>setTimeout(r,900));
+    result = buildDemoResult(sending,receiving);
+  }
+
+  lastResult = {result, sending, receiving, direction};
+  renderResult(result, sending, receiving, direction);
+  btn.disabled  = false;
+  btn.innerHTML = "Analyze Trade";
+
+  // Secret achievement: One More Year — analyzed a trade with a player over 37
+  if(typeof playerMeta !== "undefined" && typeof arcPoints !== "undefined") {
+    const allPlayers = [...sending, ...receiving].filter(n => !/^\d{4}/.test(n));
+    const hasVeteran = allPlayers.some(n => playerMeta[n] && playerMeta[n].age >= 37);
+    if(hasVeteran) arcPoints.awardSecret("secret_one_more_year");
+  }
+
+  // Post-analyze secret achievements
+  // Use getSide/giveSide (pre-flip) so "you receive" always means what's in the YOU GET box
+  if(typeof arcPoints !== "undefined" && result) {
+    const youGet      = [...getSide];   // always what user typed in YOU GET box
+    const youGive     = [...giveSide];  // always what user typed in YOU GIVE box
+    const recvPlayers = youGet.filter(n => !/^\d{4}/.test(n));
+    const recvPicks   = youGet.filter(n => /^\d{4}/.test(n));
+    const sendPlayers = youGive.filter(n => !/^\d{4}/.test(n));
+    const recvLower   = recvPlayers.map(n => n.toLowerCase());
+    const sendLower   = sendPlayers.map(n => n.toLowerCase());
+    const allLower    = [...youGet, ...youGive].map(n => n.toLowerCase());
+
+    // Hoarder: receive 4+ picks
+    if(recvPicks.length >= 4) arcPoints.awardSecret("secret_hoarder");
+
+    // Short Kings: receive one of the vertically challenged dynasty assets
+    const shortKings = ['calvin austin', 'zay flowers', "wan'dale robinson", 'wandale robinson',
+                        'kavontae turpin', 'greg dortch'];
+    if(recvLower.some(n => shortKings.some(k => n.includes(k.split(' ')[1])))) {
+      arcPoints.awardSecret("secret_short_kings");
+    }
+
+    // Shipley Basin Road: receive Will Shipley
+    if(recvLower.some(n => n.includes('shipley'))) {
+      arcPoints.awardSecret("secret_shipley_basin_road");
+    }
+
+    // Hurts Donuit: overpaid by 1.5x+ and received Jalen Hurts
+    // Use KTC_VALUES directly against the give/get boxes for accurate comparison
+    const vGive = youGive.reduce((s,n) => s + (KTC_VALUES[n]||0), 0);
+    const vGet  = youGet.reduce((s,n)  => s + (KTC_VALUES[n]||0), 0);
+    const hasHurts = recvLower.some(n => n.includes('hurts'));
+    if(hasHurts && vGive > 0 && vGet > 0 && vGive / vGet >= 1.5) {
+      arcPoints.awardSecret("secret_hurts_donuit");
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEMO RESULT (server offline)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildDemoResult(sending, receiving){
+  const vs = sending.reduce((s,n)=>s+(KTC_VALUES[n]||0),0);
+  const vr = receiving.reduce((s,n)=>s+(KTC_VALUES[n]||0),0);
+  const adv = vr>0 ? vs/vr : 1;
+  let prob, verdict, convRange;
+  if(adv>=2.0){prob=88;verdict="Strong Deal Zone";convRange="strong";}
+  else if(adv>=1.5){prob=72;verdict="Likely Deal Zone";convRange="favorable";}
+  else if(adv>=1.1){prob=52;verdict="Conversation Starter";convRange="workable";}
+  else if(adv>=0.85){prob=28;verdict="Long Shot";convRange="long_shot";}
+  else{prob=12;verdict="Too Far Off";convRange="out_of_range";}
+
+  const gap = adv>=1?"You're sending "+Math.round((adv-1)*100)+"% more value":"You're receiving "+Math.round((1/adv-1)*100)+"% more value";
+
+  return {
+    acceptance_probability: prob,
+    verdict,
+    value_gap: gap+" (KTC). Connect Sleeper for full behavioral analysis including manager signals.",
+    conversation_range: convRange,
+    value_sent: vs,
+    value_received: vr,
+    narrative: [
+      {icon:"📊",text:`Receiver advantage ${adv.toFixed(2)}× based on KTC snapshot values`,sentiment:adv>=1.1?"good":adv>=0.9?"neutral":"bad"},
+      {icon:"ℹ️",text:"Limited mode — connect Sleeper for full behavioral analysis, manager signals, and comparable trades",sentiment:"neutral"},
+    ],
+    corpus_precedent:{pct_accepted:null,n_similar:0,note:"More data accumulates over time"},
+    send_profiles: sending.map(n=>({name:n,age_bucket:/^\d{4}/.test(n)?"pick":"prime",ktc:KTC_VALUES[n]||0})),
+    recv_profiles: receiving.map(n=>({name:n,age_bucket:/^\d{4}/.test(n)?"pick":"prime",ktc:KTC_VALUES[n]||0})),
+    comparable_accepted:[],
+    comparable_rejected:[],
+    mode:"demo",
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESULT RENDERING
+// ─────────────────────────────────────────────────────────────────────────────
+const VERDICT_META = {
+  "Strong Deal Zone":    {clr:"#22c55e",bg:"rgba(34,197,94,0.08)",  border:"rgba(34,197,94,0.35)",  icon:"✅",strip:4,
+    text:"Value is clearly favorable and behavioral signals align — this offer is in strong territory."},
+  "Likely Deal Zone":    {clr:"#86efac",bg:"rgba(134,239,172,0.06)",border:"rgba(134,239,172,0.3)", icon:"✅",strip:3,
+    text:"Value is workable and behavioral signals are favorable — a strong offer that doesn't need much padding."},
+  "Conversation Starter":{clr:"#eab308",bg:"rgba(234,179,8,0.07)",  border:"rgba(234,179,8,0.35)",  icon:"💬",strip:2,
+    text:"Value gap is workable — a counter-offer has a real chance of finding a deal."},
+  "Long Shot":           {clr:"#f97316",bg:"rgba(249,115,22,0.07)", border:"rgba(249,115,22,0.35)", icon:"🎲",strip:1,
+    text:"Possible, but a meaningful counter will be needed to close the gap."},
+  "Too Far Off":         {clr:"#f87171",bg:"rgba(248,113,113,0.07)",border:"rgba(248,113,113,0.35)",icon:"🚫",strip:0,
+    text:"Likely reads as a lowball — may need a major restructure to start a conversation."},
+};
+const ZONE_STRIP = [
+  {key:"Too Far Off",    label:"Too Far Off",   clr:"#f87171"},
+  {key:"Long Shot",      label:"Long Shot",      clr:"#f97316"},
+  {key:"Conversation Starter",label:"Conv. Starter",clr:"#eab308"},
+  {key:"Likely Deal Zone",label:"Likely Deal",   clr:"#86efac"},
+  {key:"Strong Deal Zone",label:"Strong",        clr:"#22c55e"},
+];
+
+function valueGapMessage(r, dir) {
+  const prob    = r.acceptance_probability || 0;
+  const vSend   = r.val_send || 0;  // a_ktc: what YOU send / they receive
+  const vRecv   = r.val_recv || 0;  // b_ktc: what YOU receive / they give up
+  const diff    = Math.abs(vSend - vRecv);
+  const rcvd    = (dir === "received");
+  const highProb = prob >= 58;
+  const lowProb  = prob < 42;
+
+  // Even trade
+  if (diff < 300) {
+    return "Roughly even by KTC — deal likelihood depends on fit and player attachment.";
+  }
+
+  if (rcvd) {
+    // RECEIVED mode: someone sent this TO you. YOU are the receiver.
+    // vSend = what you'd give up, vRecv = what you'd get
+    const youGetMore = vRecv > vSend;  // you'd receive more than you give up
+    if (youGetMore) {
+      if (highProb) return `This offer is in your favor (+${diff.toLocaleString()} KTC) — behavioral signals support accepting.`;
+      return `Value favors you (+${diff.toLocaleString()} KTC) — but behavioral signals suggest caution before accepting.`;
+    } else {
+      // You'd give up more than you get
+      if (lowProb) return `You'd be giving up +${diff.toLocaleString()} more KTC than you receive — this offer favors the sender.`;
+      return `You'd give up +${diff.toLocaleString()} more KTC than you receive, but behavioral signals may justify it.`;
+    }
+  } else {
+    // SENT mode: YOU are sending this offer. THEY are the receiver.
+    // vSend > vRecv means you're giving them more than you're getting back
+    const youOverpay = vSend > vRecv;
+    if (lowProb && youOverpay) {
+      // Critical case: overpaying but low prob — resistance isn't about value
+      return `You're offering above-market value (+${diff.toLocaleString()} KTC in their favor) — the resistance here isn't about value. The model sees attachment or structural friction as the real barrier.`;
+    }
+    if (highProb && youOverpay) {
+      return `You're sending strong value (+${diff.toLocaleString()} KTC in their favor) — behavioral signals confirm this offer is in good territory.`;
+    }
+    if (lowProb && !youOverpay) {
+      return `Value favors you by ${diff.toLocaleString()} KTC — this offer needs more value to start a conversation.`;
+    }
+    if (highProb && !youOverpay) {
+      return `Value favors you by ${diff.toLocaleString()} KTC, but behavioral signals suggest they'd still accept.`;
+    }
+    if (youOverpay) {
+      return `You're giving up +${diff.toLocaleString()} more KTC than you're getting — this offer favors them.`;
+    } else {
+      return `You'd receive +${diff.toLocaleString()} more KTC than you give up — this offer is in your favor.`;
+    }
+  }
+}
+
+function renderResult(r, sending, receiving, dir){
+  const el = document.getElementById("result");
+  el.style.display = "block";
+  el.innerHTML = buildResultHTML(r, sending, receiving, dir);
+  el.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function buildResultHTML(r, sending, receiving, dir){
+  const prob    = r.acceptance_probability || 0;
+  const verdict = r.verdict || "Conversation Starter";
+  const vm      = VERDICT_META[verdict] || VERDICT_META["Conversation Starter"];
+  const vs      = r.value_sent     || sending.reduce((s,n)=>s+(KTC_VALUES[n]||0),0);
+  const vr      = r.value_received || receiving.reduce((s,n)=>s+(KTC_VALUES[n]||0),0);
+  const total   = vs + vr || 1;
+  const isDemo  = r.mode==="demo";
+
+  return `
+  <div class="result-card">
+    ${isDemo?`<div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
+      border-radius:8px;padding:8px 13px;margin-bottom:16px;font-size:11px;color:#d97706;display:flex;gap:8px;align-items:center">
+      <span>⚠️</span>
+      <span>Limited mode — KTC value analysis only. Full analysis requires server connection.</span>
+    </div>`:""}
+
+    ${r.overpay_warning||((vs>0&&vr>0&&(vs/vr)>1.6)&&!isDemo)?`
+    <div class="overpay-warn">
+      <span style="font-size:16px;flex-shrink:0">⚠️</span>
+      <div><strong>Heads up — you're significantly overpaying.</strong>
+        You're sending <strong style="color:#fbbf24">${vs.toLocaleString()}</strong> to receive
+        <strong style="color:#fbbf24">${vr.toLocaleString()}</strong> in KTC value.</div>
+    </div>`:""}
+
+    <!-- TOP: GAUGE + VERDICT -->
+    <div class="result-top">
+      <div class="gauge-col">
+        ${gaugeHTML(prob)}
+        <div class="gauge-label">ACCEPT PROB</div>
+      </div>
+      <div class="verdict-col">
+        <div class="verdict-pill" style="color:${vm.clr};background:${vm.bg};border-color:${vm.border}">
+          ${verdict}
+        </div>
+        <div class="value-gap-text">${valueGapMessage(r, dir)}</div>
+
+        <!-- CONVERSATION RANGE BANNER -->
+        ${convBannerHTML(r)}
+
+        <!-- CORPUS PRECEDENT -->
+        ${corpusBadgeHTML(r)}
+
+        <!-- VALUE BAR -->
+        <div class="val-bar-wrap">
+          <div class="val-bar-nums">
+            <span>📤 <strong style="color:#4a9eff">${vs.toLocaleString()}</strong></span>
+            <span>📥 <strong style="color:#22c55e">${vr.toLocaleString()}</strong></span>
+          </div>
+          <div class="val-bar-track">
+            <div class="val-bar-fill" style="width:${Math.round((vs/total)*100)}%"></div>
+          </div>
+          <div class="val-bar-labels"><span>YOU SEND</span><span>YOU RECEIVE</span></div>
+        </div>
+      </div>
+    </div>
+
+    ${r.consolidation_note?`<div class="warn-box warn-amber"><span>🔀</span><span>${r.consolidation_note}</span></div>`:""}
+    ${r.counter_warning?`<div class="warn-box warn-yellow"><span>⚠️</span><span>${r.counter_warning}</span></div>`:""}
+
+    <!-- NARRATIVE BULLETS -->
+    ${narrativeHTML(r)}
+
+    <!-- PRODUCTION PROFILES -->
+    ${profilesHTML(r)}
+
+    <!-- COMPARABLE TRADES -->
+    ${comparablesHTML(r)}
+
+    <!-- SUBMIT FOR COMMUNITY REVIEW -->
+    <div class="submit-review-bar">
+      <div class="submit-review-text">
+        <span>Want the community's take?</span>
+        Add this trade to the voting feed to see how real dynasty managers would respond.
+      </div>
+      <button id="submit-review-btn" onclick="openSubmit()">Submit for Review</button>
+    </div>
+
+    <!-- LOG ACTUAL OUTCOME -->
+    <div class="log-section-wrap">
+      <button class="log-toggle-btn" id="log-toggle-btn" onclick="toggleLogSection()">
+        <span>📋 Log Trade Outcome <span style="font-size:10px;color:#64748b;margin-left:6px">— trains the model on real results</span></span>
+        <span id="log-toggle-chevron" style="font-size:10px;color:#64748b">▼</span>
+      </button>
+      <div class="log-expanded" id="log-expanded-section">
+        <div style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.5">
+          Did this offer actually happen? Logging outcomes is the most valuable contribution you can make — it trains the model on what gets accepted vs rejected in real leagues.
+          <span style="color:#4a6a8a"> Separate from "Submit for Review" which asks the community to vote.</span>
+        </div>
+        <div class="date-row">
+          <span class="date-label">TRADE DATE</span>
+          <input type="date" class="date-input" id="log-date-input" value="${new Date().toISOString().slice(0,10)}"/>
+          <span style="font-size:10px;color:#4a6a8a">(optional — enables historical KTC values)</span>
+        </div>
+        <div style="font-size:10px;color:#4a6a8a;margin-bottom:8px;padding:7px 10px;
+          background:rgba(56,98,168,0.06);border-radius:6px;border:1px solid rgba(56,98,168,0.12)">
+          💡 Accepted trades enter the model automatically when you connect Sleeper.
+          Log <strong style="color:#e2eaf8">Rejected</strong> or <strong style="color:#e2eaf8">Countered</strong> outcomes — these can't be captured any other way.
+        </div>
+        <div class="log-outcome-bar" id="log-outcome-row">
+          <button class="log-btn log-rejected" onclick="selectOutcome('rejected')">✗ Rejected</button>
+          <button class="log-btn log-countered" onclick="showCounterPanel()">⇄ Countered</button>
+        </div>
+        <!-- Rejection reasons — shown when rejected is selected -->
+        <div id="reject-reasons-panel" style="display:none">
+          <div class="reject-reasons">
+            <div class="reject-reasons-title">✗ WHY DID THEY REJECT? <span style="font-size:9px;color:#475569;font-weight:400">(select all that apply)</span></div>
+            <div class="reject-chips" id="reject-chips">
+              ${['Attached to player','Age / decline concern','Injury concern','Wrong position need',
+                 'Wants more value','Rebuilding, wants youth','Contending, wants proven',
+                 'No response','Bad timing'].map(r =>
+                `<span class="reject-chip" onclick="toggleRejectChip(this)">${r}</span>`
+              ).join('')}
+            </div>
+          </div>
+        </div>
+        <div id="counter-panel-wrap"></div>
+        <button class="log-save-btn" id="log-save-btn" style="display:none" onclick="saveOutcome()">
+          Save Trade Outcome
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;text-align:center;font-size:9.5px;color:#1a2d48;letter-spacing:0.03em">
+      Optimized for 12-team superflex · results may vary for other formats
+    </div>
+  </div>`;
+}
+
+function gaugeHTML(prob){
+  const angle = -135+(prob/100)*270;
+  const clr   = prob>=70?"#22c55e":prob>=50?"#f59e0b":prob>=30?"#f97316":"#ef4444";
+  const dash  = (prob/100)*226;
+  return `<svg width="140" height="98" viewBox="0 0 140 98" style="overflow:visible">
+    <path d="M 18 82 A 52 52 0 1 1 122 82" fill="none" stroke="#1e3050" stroke-width="9" stroke-linecap="round"/>
+    <path d="M 18 82 A 52 52 0 1 1 122 82" fill="none" stroke="${clr}" stroke-width="9" stroke-linecap="round"
+      stroke-dasharray="${dash} 226"/>
+    <g transform="rotate(${angle},70,82)">
+      <line x1="70" y1="82" x2="70" y2="36" stroke="${clr}" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="70" cy="82" r="6" fill="${clr}"/>
+      <circle cx="70" cy="82" r="2.5" fill="#05101a"/>
+    </g>
+    <text x="70" y="75" text-anchor="middle" fill="${clr}"
+      font-size="18" font-weight="800" font-family="'Courier New',monospace">${prob}%</text>
+  </svg>`;
+}
+
+function convBannerHTML(r){
+  const verdict = r.verdict||"";
+  const prob    = r.acceptance_probability||0;
+  const convRange=r.conversation_range||"";
+  let vm = VERDICT_META[verdict];
+  if(!vm) return "";
+
+  // Divergence overrides (mirroring existing HTML logic)
+  let divergenceNote = null;
+  let effectiveVerdict = verdict;
+  if(convRange==="strong"&&prob<42){
+    vm={...vm,clr:"#f59e0b",border:"rgba(245,158,11,0.35)",bg:"rgba(245,158,11,0.06)",
+      icon:"⚠️",text:"Strong value for them, but behavioral signals are pushing back. Check the bullets below."};
+    effectiveVerdict="Long Shot";
+    divergenceNote="KTC ratio is strong but behavioral signals are working against this offer.";
+  } else if((convRange==="long_shot"||convRange==="out_of_range")&&prob>=75){
+    vm={...VERDICT_META["Strong Deal Zone"],
+      text:"Behavioral signals push this well above the value gap — this offer is likely strong enough to send without a counter."};
+    effectiveVerdict="Strong Deal Zone";
+    divergenceNote="Model score elevated — behavioral signals are doing significant work here.";
+  } else if((convRange==="long_shot"||convRange==="out_of_range")&&prob>=58){
+    divergenceNote="Behavioral signals are pulling this above the raw KTC ratio.";
+  }
+
+  const activeIdx = ZONE_STRIP.findIndex(z=>z.key===effectiveVerdict);
+
+  return `<div class="conv-banner" style="background:${vm.bg};border-color:${vm.border}">
+    <div class="conv-banner-head">
+      <span class="conv-icon">${vm.icon}</span>
+      <div>
+        <div class="conv-title" style="color:${vm.clr}">${verdict}</div>
+        <div class="conv-text">${vm.text}</div>
+      </div>
+    </div>
+    <div class="zone-strip">
+      ${ZONE_STRIP.map((z,i)=>`
+        <div class="zone-seg" style="background:${i===activeIdx?z.clr:"#0d1e33"};
+          box-shadow:${i===activeIdx?`0 0 8px ${z.clr}88`:"none"}"></div>`).join("")}
+    </div>
+    <div style="display:flex">
+      ${ZONE_STRIP.map((z,i)=>`
+        <div class="zone-lbl" style="color:${i===activeIdx?z.clr:"#2a4a6a"};
+          font-weight:${i===activeIdx?700:400}">${z.label}</div>`).join("")}
+    </div>
+    ${divergenceNote?`<div class="divergence-note">⚡ ${divergenceNote}</div>`:""}
+  </div>`;
+}
+
+function corpusBadgeHTML(r){
+  const cp = r.corpus_precedent;
+  if(!cp) return "";
+
+  // No server data at all
+  if(!cp.tier) return `
+    <div class="corpus-badge">
+      <div class="corpus-badge-head">
+        <span class="corpus-title">📚 Historical Precedent</span>
+        <div class="corpus-dots">
+          <div class="corpus-dot" style="background:#1e3050"></div>
+          <div class="corpus-dot" style="background:#1e3050"></div>
+          <div class="corpus-dot" style="background:#1e3050"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#2a4a6a;font-style:italic">No corpus data — start server for historical trade matching</div>
+    </div>`;
+
+  // Dot colors by tier: strong=3 filled, some=2, thin=1, rare=0
+  const tierDotCount = {strong:3, some:2, thin:1, rare:0}[cp.tier] || 0;
+  const tierDotClr   = {strong:"#22c55e", some:"#60a5fa", thin:"#eab308", rare:"#1e3050"}[cp.tier] || "#1e3050";
+  const dotClrs = [0,1,2].map(i => i < tierDotCount ? tierDotClr : "#1e3050");
+
+  // Loose comparables summary (when badge is rare/thin but panel has matches)
+  const nAcc = cp.n_comp_accepted || 0;
+  const nRej = cp.n_comp_rejected || 0;
+  const hasLoose = nAcc > 0 || nRej > 0;
+  const summaryHTML = hasLoose ? `
+    <div style="margin-top:5px;font-size:11px;display:flex;gap:10px;flex-wrap:wrap">
+      ${nAcc>0?`<span style="color:#4ade80">&#10003; ${nAcc} accepted</span>`:""}
+      ${nRej>0?`<span style="color:#f87171">&#10007; ${nRej} rejected</span>`:""}
+      <span style="color:#4a6a8a">in similar structures</span>
+    </div>` : "";
+
+  return `<div class="corpus-badge">
+    <div class="corpus-badge-head">
+      <span class="corpus-title">📚 Historical Precedent</span>
+      <div class="corpus-dots">
+        ${dotClrs.map(c=>`<div class="corpus-dot" style="background:${c}"></div>`).join("")}
+      </div>
+    </div>
+    <div class="corpus-row">
+      ${cp.label?`<span class="corpus-stat" style="font-weight:700;color:#7ab8e8">${cp.label}</span>`:""}
+      ${cp.n_matches?`<span class="corpus-stat"><strong>${cp.n_matches}</strong> close match${cp.n_matches>1?"es":""}</span>`:""}
+      ${cp.note?`<span class="corpus-stat" style="color:#6a8aaa">${cp.note}</span>`:""}
+    </div>
+    ${summaryHTML}
+    ${cp.recency_limited?`<div style="font-size:10px;color:#2a4a6a;margin-top:4px;font-style:italic">&#9201; Corpus window expanding — more data accumulates over time</div>`:""}
+  </div>`;
+}
+
+function narrativeHTML(r){
+  if(!r.narrative||r.narrative.length===0) return "";
+  return `<div class="narrative-section">
+    ${r.narrative.map(b=>{
+      const cls = b.sentiment==="good"?"nar-good":b.sentiment==="bad"?"nar-bad":"nar-neutral";
+      return `<div class="nar-bullet">
+        <span class="nar-icon">${b.icon||"•"}</span>
+        <span class="${cls}">${b.text}</span>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+function profilesHTML(r){
+  const sp = r.send_profiles||[];
+  const rp = r.recv_profiles||[];
+  if(!sp.length&&!rp.length) return "";
+  function oneProfile(p){
+    if(p.age_bucket==="pick"){
+      const tierClr = p.pick_tier==="Early"?"#f59e0b":p.pick_tier==="Mid"?"#60a5fa":"#94a3b8";
+      const tierBg  = tierClr+"18";
+      const tierBrd = tierClr+"44";
+      return `<div class="profile-row">
+        <span class="profile-name">${p.pick_display||p.name}</span>
+        <div class="profile-badges">
+          ${p.ktc?`<span class="profile-val">${p.ktc.toLocaleString()}</span>`:""}
+          <span class="pick-pill" style="color:${tierClr};background:${tierBg};border-color:${tierBrd}">
+            🎲 ${p.pick_tier||"Pick"}
+          </span>
+        </div>
+      </div>`;
+    }
+    const tier = p.ppg_effective_tier;
+    const traj = p.ppg_trajectory;
+    const tierClr = tier==="elite"?"#f59e0b":tier==="star"?"#a78bfa":tier==="starter"?"#38bdf8":"#3a5a7a";
+    const tierLbl = tier==="elite"?"⭐ Elite":tier==="star"?"✨ Star":tier==="starter"?"📋 Starter":null;
+    const trajIcon= traj==="ascending"||traj==="breakout"?"↑":traj==="descending"?"↓":"";
+    const trajClr = traj==="ascending"||traj==="breakout"?"#34d399":traj==="descending"?"#f87171":"#4a6a8a";
+    const ktcTrend= p.trend?.trend_90;
+    // Suppress KTC down arrow when PPG says ascending/breakout — KTC post-season drift
+    // is noise for players coming off a strong year. The model already dampens the
+    // falling penalty in this case; the UI should reflect the same logic.
+    const ktcFallingMuted = ktcTrend==="falling" && (traj==="ascending"||traj==="breakout");
+    const ktcIcon = ktcTrend==="rising"?"▲":(ktcTrend==="falling"&&!ktcFallingMuted)?"▼":"";
+    const ktcClr  = ktcTrend==="rising"?"#34d399":(ktcTrend==="falling"&&!ktcFallingMuted)?"#f87171":"";
+    return `<div class="profile-row" style="background:${p.young_ascending?"#0a1e1044":"transparent"}">
+      <span class="profile-name" style="color:${p.young_ascending?"#a7f3c0":"#7a9ab8"}">${p.name}</span>
+      <div class="profile-badges">
+        ${p.ppg!=null?`<span class="profile-val">${p.ppg}${p.ppg_prior&&Math.abs(p.ppg-p.ppg_prior)>=1.5?
+          `<span style="color:${trajClr}">${p.ppg>p.ppg_prior?" ↑":" ↓"}${Math.abs(p.ppg-p.ppg_prior).toFixed(1)}</span>`:""}
+        </span>`:""}
+        ${tierLbl?`<span class="tier-pill" style="color:${tierClr};background:${tierClr}22;border-color:${tierClr}44">
+          ${trajIcon?`<span style="color:${trajClr};margin-right:2px">${trajIcon}</span>`:""}${tierLbl}
+        </span>`:""}
+        ${ktcIcon?`<span style="font-size:10px;font-weight:900;color:${ktcClr}">${ktcIcon}</span>`:""}
+      </div>
+    </div>`;
+  }
+  return `<div class="profiles-grid">
+    <div>
+      <div class="profile-col-label">You send</div>
+      ${sp.map(oneProfile).join("")}
+    </div>
+    <div>
+      <div class="profile-col-label">You receive</div>
+      ${rp.map(oneProfile).join("")}
+    </div>
+  </div>`;
+}
+
+function comparablesHTML(r){
+  const acc = r.comparable_accepted||[];
+  const rej = r.comparable_rejected||[];
+  if(!acc.length&&!rej.length) return "";
+  const uid = "comp"+Date.now();
+
+  function tradeRow(t, outcome, hidden){
+    const clr = outcome==="accepted"?"#22c55e":"#ef4444";
+    const icon = outcome==="accepted"?"✓":"✗";
+    const s = Array.isArray(t.names_a)?t.names_a.join(", "):(Array.isArray(t.sending)?t.sending.join(", "):(t.sent||""));
+    const g = Array.isArray(t.names_b)?t.names_b.join(", "):(Array.isArray(t.receiving)?t.receiving.join(", "):(t.received||""));
+    const simBadge = t.similarity!=null
+      ? `<span class="comp-sim">${t.similarity}% match</span>`
+      : "";
+    const adv = t.adv_at_time||t.adv_ratio;
+    const meta = adv!=null
+      ? `<div class="comp-meta">${adv.toFixed(2)}× value ratio${t.age_months!=null?" · "+Math.round(t.age_months)+"mo ago":""}</div>`
+      : "";
+    return `<div class="comp-trade${hidden?" comp-hidden":""}">
+      <div class="comp-sides">
+        <span class="comp-assets">${s}</span>
+        <span class="comp-arrow">→</span>
+        <span class="comp-assets">${g}</span>
+        <span style="font-size:10px;font-weight:700;color:${clr};font-family:monospace;
+          background:${clr}18;border:1px solid ${clr}33;border-radius:4px;padding:1px 6px;flex-shrink:0">
+          ${icon} ${outcome}
+        </span>
+        ${simBadge}
+      </div>
+      ${meta}
+    </div>`;
+  }
+
+  // Show first 3 accepted + 2 rejected, hide the rest behind expand
+  const accVisible = acc.slice(0,3);
+  const accHidden  = acc.slice(3);
+  const rejVisible = rej.slice(0,2);
+  const rejHidden  = rej.slice(2);
+  const hasMore = accHidden.length + rejHidden.length > 0;
+  const moreCount = accHidden.length + rejHidden.length;
+
+  const summaryParts = [];
+  if(acc.length) summaryParts.push(`<span style="color:#4ade80">&#10003; ${acc.length} accepted</span>`);
+  if(rej.length) summaryParts.push(`<span style="color:#f87171">&#10007; ${rej.length} rejected</span>`);
+  const summaryLine = `<div style="font-size:11px;display:flex;gap:10px;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,0.06)">
+    ${summaryParts.join("")}
+    <span style="color:#4a6a8a">in similar structures</span>
+  </div>`;
+
+  const expandBtn = hasMore
+    ? `<button class="comp-expand" id="${uid}-btn" onclick="
+        document.querySelectorAll('#${uid} .comp-hidden').forEach(el=>el.classList.remove('comp-hidden'));
+        this.style.display='none';
+      ">Show ${moreCount} more similar trade${moreCount>1?'s':''} ▾</button>`
+    : "";
+
+  return `<div class="comparables" id="${uid}">
+    <div class="comp-title">&#128203; Similar Trades in History</div>
+    ${summaryLine}
+    ${accVisible.map(t=>tradeRow(t,"accepted",false)).join("")}
+    ${accHidden.map(t=>tradeRow(t,"accepted",true)).join("")}
+    ${rejVisible.map(t=>tradeRow(t,"rejected",false)).join("")}
+    ${rejHidden.map(t=>tradeRow(t,"rejected",true)).join("")}
+    ${expandBtn}
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOG OUTCOME
+// ─────────────────────────────────────────────────────────────────────────────
+// ── Counter panel state ───────────────────────────────────────────────────────
+let counterSend = [];
+let counterRecv = [];
+let counterBlurTimers = {};
+
+function getLogDate(){
+  const el = document.getElementById("log-date-input");
+  return el ? el.value : new Date().toISOString().slice(0,10);
+}
+
+function counterQuality(sendArr, recvArr){
+  const vs = sendArr.reduce((s,n)=>s+(KTC_VALUES[n]||0),0);
+  const vr = recvArr.reduce((s,n)=>s+(KTC_VALUES[n]||0),0);
+  if(!vs && !vr) return null;
+  const larger  = Math.max(vs, vr, 1);
+  const smaller = Math.max(Math.min(vs, vr), 1);
+  const ratio   = larger / smaller;
+  if(ratio < 1.25) return {label:"Genuine counter — real negotiation",cls:"genuine",icon:"🟢",ratio};
+  if(ratio < 1.75) return {label:"Lukewarm counter — significant gap",cls:"lukewarm",icon:"🟡",ratio};
+  return          {label:"Insulting counter — treat as near-rejection",cls:"insulting",icon:"🔴",ratio};
+}
+
+function renderCounterQuality(){
+  const q = counterQuality(counterSend, counterRecv);
+  const el = document.getElementById("counter-quality-display");
+  if(!el) return;
+  if(!q){ el.innerHTML=""; return; }
+  el.className = "counter-quality "+q.cls;
+  el.innerHTML = `<span style="font-size:14px">${q.icon}</span>
+    <span>${q.label} <span style="opacity:0.6">(ratio ${q.ratio.toFixed(2)}×)</span></span>`;
+}
+
+function renderCounterTags(side){
+  const arr = side==="cs" ? counterSend : counterRecv;
+  const el  = document.getElementById("counter-tags-"+side);
+  if(!el) return;
+  const collapsed = arr.reduce((acc,n)=>{
+    const ex=acc.find(x=>x.n===n); ex?ex.q++:acc.push({n,q:1}); return acc;
+  },[]);
+  el.innerHTML = collapsed.map(({n,q})=>{
+    const clr = POS_CLR[getPos(n)]||"#94a3b8";
+    const val = (KTC_VALUES[n]||0)*q;
+    return `<div class="asset-tag" style="background:${clr}11;border-color:${clr}33;font-size:11px">
+      <span class="asset-tag-pos" style="color:${clr};background:${clr}18;font-size:7px">${getPos(n)}</span>
+      <span class="asset-tag-name" style="font-size:11px">${n}</span>
+      <span class="asset-tag-val" style="color:${clr};font-size:10px">${val.toLocaleString()}</span>
+      <span class="asset-tag-rm" onclick="removeCounterAsset('${side}','${n.replace(/'/g,"\\'")}')">×</span>
+    </div>`;
+  }).join("");
+  renderCounterQuality();
+}
+
+function removeCounterAsset(side, name){
+  const arr = side==="cs" ? counterSend : counterRecv;
+  const idx = arr.lastIndexOf(name);
+  if(idx!==-1) arr.splice(idx,1);
+  renderCounterTags(side);
+}
+
+function counterSearch(side){
+  const inputId = "counter-input-"+side;
+  const dropId  = "counter-drop-"+side;
+  const q = document.getElementById(inputId)?.value?.trim()||"";
+  const drop = document.getElementById(dropId);
+  if(!drop) return;
+  if(q.length < 2){ drop.style.display="none"; return; }
+  const selected = side==="cs" ? counterSend : counterRecv;
+  const matches = Object.keys(KTC_VALUES).filter(n=>{
+    if(!n.toLowerCase().includes(q.toLowerCase())) return false;
+    if(/^\d{4}/.test(n)) return true;
+    return !selected.includes(n);
+  }).slice(0,25);
+  if(!matches.length){ drop.style.display="none"; return; }
+  drop.innerHTML = matches.map(n=>{
+    const clr = POS_CLR[getPos(n)]||"#94a3b8";
+    return `<div class="dropdown-item" onmousedown="addCounterAsset('${side}','${n.replace(/'/g,"\\'")}')">
+      <span>${n}</span>
+      <span class="dropdown-val" style="color:${clr}">${(KTC_VALUES[n]||0).toLocaleString()}</span>
+    </div>`;
+  }).join("");
+  drop.style.display="block";
+}
+
+function addCounterAsset(side, name){
+  const arr = side==="cs" ? counterSend : counterRecv;
+  arr.push(name);
+  document.getElementById("counter-input-"+side).value="";
+  document.getElementById("counter-drop-"+side).style.display="none";
+  renderCounterTags(side);
+}
+
+function showCounterPanel(){
+  counterSend = [];
+  counterRecv = [];
+  const wrap = document.getElementById("counter-panel-wrap");
+  if(!wrap) return;
+  wrap.innerHTML = `
+    <div class="counter-panel" id="counter-panel">
+      <div class="counter-panel-title">⇄ WHAT DID THEY COUNTER WITH?</div>
+      <div class="counter-panel-sub">
+        Log the counter offer — the value ratio auto-classifies it as genuine negotiation or a "get lost" counter.
+      </div>
+      <div class="counter-sides">
+        <div>
+          <div class="counter-side-label">They send you</div>
+          <div style="position:relative">
+            <input id="counter-input-cs" class="counter-search" placeholder="Search player or pick..."
+              oninput="counterSearch('cs')"
+              onblur="setTimeout(()=>{const d=document.getElementById('counter-drop-cs');if(d)d.style.display='none'},180)"/>
+            <div id="counter-drop-cs" class="dropdown" style="display:none"></div>
+          </div>
+          <div id="counter-tags-cs" class="counter-tags"></div>
+        </div>
+        <div>
+          <div class="counter-side-label">They want from you</div>
+          <div style="position:relative">
+            <input id="counter-input-cr" class="counter-search" placeholder="Search player or pick..."
+              oninput="counterSearch('cr')"
+              onblur="setTimeout(()=>{const d=document.getElementById('counter-drop-cr');if(d)d.style.display='none'},180)"/>
+            <div id="counter-drop-cr" class="dropdown" style="display:none"></div>
+          </div>
+          <div id="counter-tags-cr" class="counter-tags"></div>
+        </div>
+      </div>
+      <div id="counter-quality-display" class="counter-quality neutral" style="display:${counterSend.length||counterRecv.length?'flex':'none'}"></div>
+      <button class="save-counter-btn" onclick="saveCounter()">Save Counter Offer</button>
+    </div>`;
+}
+
+async function saveCounter(){
+  const q = counterQuality(counterSend, counterRecv);
+  if(!lastResult) return;
+  const {sending, receiving} = lastResult;
+  const tradeDate = getLogDate();
+  const notes = q
+    ? `Counter (${q.label}, ratio ${q.ratio.toFixed(2)}×) logged ${tradeDate!==new Date().toISOString().slice(0,10)?'for '+tradeDate:''}`
+    : "Counter logged";
+
+  // Fire-and-forget — never block UI on fetch
+  const base = (typeof API_BASE !== "undefined" && API_BASE) || (serverOnline ? API : null);
+  if(base){
+    fetch(base+"/feedback",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        sending, receiving,
+        accepted: false,
+        notes,
+        counter_send: counterSend,
+        counter_recv: counterRecv,
+        counter_quality: q ? q.cls : "unknown",
+        counter_ratio:  q ? q.ratio : null,
+        trade_date: tradeDate,
+        device_id: typeof getDeviceId === "function" ? getDeviceId() : null,
+      }),
+      signal: AbortSignal.timeout(12000),
+    }).catch(e => console.warn("Counter save failed:", e.message));
+  }
+
+  if(typeof arcPoints !== "undefined") arcPoints.award("counter");
+
+  // Map cls to user-friendly label
+  const typeLabel = q?.cls === "genuine"   ? "Genuine counter — real negotiation"
+                  : q?.cls === "lukewarm"  ? "Lukewarm counter — significant gap"
+                  : q?.cls === "insulting" ? '"Get lost" counter — treat as rejection'
+                  : "Counter logged";
+  const icon = q?.cls === "genuine" ? "⇄" : q?.cls === "lukewarm" ? "⚠️" : "✗";
+  const clr  = q?.cls === "genuine" ? "#22c55e" : q?.cls === "lukewarm" ? "#f59e0b" : "#ef4444";
+
+  // Clear the counter panel and show done state matching the rejected flow
+  document.getElementById("counter-panel-wrap").innerHTML = "";
+  document.getElementById("log-expanded-section").innerHTML = `
+    <div class="log-done" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+      <span style="font-size:16px">${icon}</span>
+      <div>
+        <div style="color:${clr};font-weight:600">${typeLabel}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">
+          ${q ? `Value ratio ${q.ratio.toFixed(2)}× · ` : ""}${base ? "Saved — thank you for contributing to the model" : "Connect Sleeper to save outcomes to the model"}
+        </div>
+      </div>
+    </div>`;
+  document.getElementById("log-toggle-btn").style.display = "none";
+}
+
+// ── Log outcome helpers ───────────────────────────────────────────────────────
+let _selectedOutcome = null;
+
+function toggleLogSection(){
+  const section = document.getElementById("log-expanded-section");
+  const btn     = document.getElementById("log-toggle-btn");
+  const chevron = document.getElementById("log-toggle-chevron");
+  const isOpen  = section.classList.contains("visible");
+  section.classList.toggle("visible", !isOpen);
+  btn.classList.toggle("open", !isOpen);
+  chevron.textContent = isOpen ? "▼" : "▲";
+}
+
+function selectOutcome(outcome){
+  _selectedOutcome = outcome;
+  // Highlight selected button
+  document.querySelectorAll(".log-outcome-bar .log-btn").forEach(b => b.style.opacity = "0.4");
+  const map = {accepted:".log-accepted", rejected:".log-rejected"};
+  if(map[outcome]){
+    const el = document.querySelector(map[outcome]);
+    if(el) el.style.opacity = "1";
+  }
+  // Show rejection reasons panel if rejected
+  const rp = document.getElementById("reject-reasons-panel");
+  if(rp) rp.style.display = outcome === "rejected" ? "block" : "none";
+  // Hide counter panel if switching away
+  if(outcome !== "countered"){
+    const cp = document.getElementById("counter-panel-wrap");
+    if(cp) cp.innerHTML = "";
+  }
+  // Show save button
+  const sb = document.getElementById("log-save-btn");
+  if(sb) sb.style.display = "block";
+}
+
+function toggleRejectChip(el){
+  el.classList.toggle("selected");
+}
+
+function getSelectedRejectReasons(){
+  return [...document.querySelectorAll(".reject-chip.selected")].map(c => c.textContent.trim());
+}
+
+async function saveOutcome(){
+  if(!_selectedOutcome || !lastResult) return;
+  const btn = document.getElementById("log-save-btn");
+  if(btn){ btn.disabled = true; btn.textContent = "Saving…"; }
+
+  const outcome  = _selectedOutcome;  // capture before any async clears it
+  const {sending, receiving} = lastResult;
+  const tradeDate = getLogDate();
+  const reasons   = getSelectedRejectReasons();
+  const notes = outcome === "rejected" && reasons.length
+    ? `Rejected — reasons: ${reasons.join(", ")} (${tradeDate})`
+    : `Logged as ${outcome} on ${tradeDate} via analyze page`;
+
+  // Fire-and-forget — never let the fetch block the UI update
+  const base = (typeof API_BASE !== "undefined" && API_BASE) || (serverOnline ? API : null);
+  if(base){
+    fetch(base+"/feedback",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        sending, receiving,
+        accepted: outcome === "accepted",
+        notes,
+        reject_reasons: outcome === "rejected" ? reasons : [],
+        trade_date: tradeDate,
+        device_id: typeof getDeviceId === "function" ? getDeviceId() : null,
+      }),
+      signal: AbortSignal.timeout(12000),
+    }).catch(e => console.warn("Feedback save failed:", e.message));
+  }
+
+  // Update UI immediately — don't await the fetch
+  if(typeof arcPoints !== "undefined") arcPoints.award("outcome");
+
+  const icon = outcome === "accepted" ? "✓" : outcome === "rejected" ? "✗" : "⇄";
+  const reasonStr = reasons.length ? ` · <span style="color:#475569">${reasons.join(", ")}</span>` : "";
+
+  document.getElementById("log-expanded-section").innerHTML = `
+    <div class="log-done" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+      <span style="font-size:16px">${icon}</span>
+      <div>
+        <div>Logged as <strong>${outcome}</strong>${reasonStr}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">
+          ${base ? "Saved — thank you for contributing to the model" : "Connect Sleeper to save outcomes to the model"}
+        </div>
+      </div>
+    </div>`;
+  document.getElementById("log-toggle-btn").style.display = "none";
+  _selectedOutcome = null;
+}
+
+async function logOutcome(outcome){
+  // Legacy wrapper — now routes through selectOutcome + saveOutcome
+  selectOutcome(outcome);
+  await saveOutcome();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUBMIT MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function openSubmit(){
+  renderSubmitRole();
+  document.getElementById("submit-overlay").style.display="flex";
+}
+function closeSubmit(){
+  document.getElementById("submit-overlay").style.display="none";
+}
+function renderSubmitRole(){
+  document.getElementById("submit-body").innerHTML=`
+    <div style="font-size:13px;color:#7c9cbf;margin-bottom:14px">
+      Was this trade sent to you, or are you thinking of sending it?
+    </div>
+    <div class="role-grid">
+      <button class="role-btn" style="border-color:#818cf828" onclick="renderSubmitConfirm('received')">
+        <div class="role-lbl" style="color:#818cf8">I received this offer</div>
+        <div class="role-desc">Higher prior for rejected trade data</div>
+      </button>
+      <button class="role-btn" style="border-color:#34d39928" onclick="renderSubmitConfirm('sent')">
+        <div class="role-lbl" style="color:#34d399">Thinking of sending</div>
+        <div class="role-desc">Evaluating a potential offer to make</div>
+      </button>
+    </div>
+    <div class="info-box info-purple">
+      Received offers are especially valuable — they give us the best proxy for real rejected trade data.
+    </div>`;
+}
+function renderSubmitConfirm(role){
+  const {sending,receiving} = lastResult||{sending:giveSide,receiving:getSide};
+  const label = role==="received"?"I received this offer":"I'm thinking of sending this";
+  document.getElementById("submit-body").innerHTML=`
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px;font-family:monospace;letter-spacing:0.04em">
+      REVIEW: ${label.toUpperCase()}
+    </div>
+    <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(56,98,168,0.18);
+      border-radius:8px;padding:12px;margin-bottom:14px">
+      <div style="font-size:10px;color:#4a6a8a;font-family:monospace;margin-bottom:6px">TRADE</div>
+      <div style="font-size:12px;color:#93c5fd;margin-bottom:3px">${sending.join(", ")}</div>
+      <div style="font-size:11px;color:#64748b;margin:3px 0">→ for →</div>
+      <div style="font-size:12px;color:#22c55e">${receiving.join(", ")}</div>
+    </div>
+    <div class="info-box info-purple" style="margin-bottom:14px">
+      This trade + model result will be added to the community voting feed.
+      Others will vote Accept / Counter / Reject to validate the model's read.
+    </div>
+    <button class="confirm-btn" onclick="submitConfirmed('${role}')">Confirm Submission</button>`;
+}
+async function submitConfirmed(role){
+  const btn = document.querySelector(".confirm-btn");
+  if(btn){ btn.disabled = true; btn.textContent = "Submitting…"; }
+
+  const {result, sending, receiving, direction} = lastResult || {};
+
+  // When submitted_as='sent', the vote feed shows the trade from the RECEIVER's
+  // perspective (flipped). We must re-analyze from the receiver's view so the
+  // stored model_prob, verdict, and values reflect what the receiver would see —
+  // not the sender's perspective which is what lastResult contains.
+  // Example: sender offers JT + picks for Bijan. lastResult scores this ~50%
+  // favorable to sender. But the vote feed asks "would you give up Bijan for JT + picks?"
+  // which should score ~10%. We need the flipped analysis.
+  let feedResult = result;
+  if(role === 'sent' && result && serverOnline) {
+    try {
+      const flippedResp = await fetch(API + "/analyze", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          sending:         receiving || getSide,   // flipped
+          receiving:       sending  || giveSide,   // flipped
+          trade_direction: "received",
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if(flippedResp.ok) {
+        const flipped = await flippedResp.json();
+        if(flipped && !flipped.error) feedResult = flipped;
+      }
+    } catch(e) { console.warn("Flipped analysis failed, using original:", e.message); }
+  }
+
+  // Pass model_result as a nested object — that's what /api/submit expects
+  const payload = {
+    sending:      sending  || giveSide,
+    receiving:    receiving || getSide,
+    submitted_as: role,
+    device_id:    localStorage.getItem("diq_device_id") || "",
+    model_result: feedResult ? {
+      acceptance_probability: feedResult.acceptance_probability,
+      verdict:                feedResult.verdict,
+      conversation_range:     feedResult.conversation_range,
+      corpus_precedent:       feedResult.corpus_precedent,
+      narrative:              feedResult.narrative,
+      value_sent:             feedResult.value_sent,
+      value_received:         feedResult.value_received,
+    } : null,
+
+  };
+
+  let success = false;
+  try {
+    const r = await fetch(API + "/submit", {
+      method:  "POST",
+      headers: {"Content-Type": "application/json"},
+      body:    JSON.stringify(payload),
+      signal:  AbortSignal.timeout(20000),
+    });
+    if(r.status === 409) {
+      // Duplicate — trade already in feed, treat as success
+      success = true;
+    } else {
+      success = r.ok;
+      if(r.ok && window.arcPoints) {
+        window.arcPoints.award("submit");
+
+        // Secret achievements on successful submission
+        const allAssets = [...(sending||[]), ...(receiving||[])];
+        const playerAssets = allAssets.filter(n => !/^\d{4}/.test(n));
+
+        // Taking Out the Trash — any player with KTC avg < 1000
+        const hasJunk = playerAssets.some(n => (KTC_VALUES[n]||0) < 1000 && (KTC_VALUES[n]||0) > 0);
+        if(hasJunk) window.arcPoints.awardSecret("secret_taking_out_trash");
+
+        // Mooney or Your Life — trade includes Darnell Mooney
+        const hasMooney = playerAssets.some(n => n.toLowerCase().includes("mooney"));
+        if(hasMooney) window.arcPoints.awardSecret("secret_mooney_or_life");
+
+        // Lottery Ticket — trade includes 2026 1.01 or Jermiya Love
+        const hasLottery = allAssets.some(n => n === "2026 Pick 1.01" || n.toLowerCase().includes("jermiya love"));
+        if(hasLottery) window.arcPoints.awardSecret("secret_lottery_ticket");
+
+        // We Can Replace Him In The Draft, Right? — give up AJ Brown, receive lesser WR
+        const sendAssets = sending || [];
+        const recvAssets = receiving || [];
+        const hasAJBrown = sendAssets.some(n => n.toLowerCase().replace(/\./g,'').includes("aj brown"));
+        if(hasAJBrown) {
+          const ajVal = KTC_VALUES["A.J. Brown"] || KTC_VALUES["AJ Brown"] || 0;
+          const recvWRs = recvAssets.filter(n => !/^\d{4}/.test(n) && (KTC_VALUES[n]||0) > 0 && (KTC_VALUES[n]||0) < ajVal);
+          if(recvWRs.length > 0) window.arcPoints.awardSecret("secret_aj_brown_replacement");
+        }
+
+        // Players Over Picks — send 3+ first/second round picks, receive no picks
+        const sendPicksS = sendAssets.filter(n => /^\d{4}/.test(n));
+        const recvPicksS = recvAssets.filter(n => /^\d{4}/.test(n));
+        const highPicksS = sendPicksS.filter(n => {
+          const lower = n.toLowerCase();
+          return lower.includes('1st') || lower.includes('2nd') ||
+                 /pick 1\./.test(lower) || /pick 2\./.test(lower);
+        });
+        if(highPicksS.length >= 3 && recvPicksS.length === 0) {
+          window.arcPoints.awardSecret("secret_players_over_picks");
+        }
+      }
+    }
+  } catch(e) {
+    console.warn("Submit failed:", e.message);
+  }
+
+  document.getElementById("submit-body").innerHTML = success
+    ? `<div class="done-wrap">
+        <div class="done-icon">✓</div>
+        <div class="done-title">Submitted!</div>
+        <div class="done-sub">
+          Your trade has been added to the community voting queue.<br>
+          It will appear in the feed once it clears the deduplication check.
+        </div>
+       </div>`
+    : `<div class="done-wrap">
+        <div class="done-icon" style="color:#ef4444">✗</div>
+        <div class="done-title" style="color:#ef4444">Submission failed</div>
+        <div class="done-sub">
+          Could not reach the server. Check your connection and try again.
+        </div>
+       </div>`;
+  setTimeout(closeSubmit, 2400);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MANAGER TYPEAHEAD
+// ─────────────────────────────────────────────────────────────────────────────
+let selectedMgrObj = null;
+
+function filterManagers(q){
+  const drop = document.getElementById("mgr-drop");
+  if(!drop) return;
+  // Don't show dropdown if input isn't actively focused by user
+  const input = document.getElementById("mgr-input");
+  if(input && document.activeElement !== input) return;
+  const teamMgrs   = managers.filter(m => m.profile_type === "team");
+  const mergedMgrs = managers.filter(m => m.profile_type === "merged");
+  const all = [...teamMgrs, ...mergedMgrs];
+  if(!all.length){ drop.style.display="none"; return; }
+
+  const filtered = q.length > 0
+    ? all.filter(m => m.display_name.toLowerCase().includes(q.toLowerCase()))
+    : all;
+
+  if(!filtered.length){ drop.style.display="none"; return; }
+
+  drop.innerHTML = filtered.map(m => {
+    const isMerged = m.profile_type === "merged";
+    const label = m.display_name
+      + (m.team_name && m.team_name !== m.display_name && !isMerged ? " · "+m.team_name : "")
+      + (m.league && !isMerged ? " <span style='color:#64748b;font-size:10px'>("+m.league+")</span>" : "")
+      + (isMerged ? " <span style='color:#475569;font-size:10px'>(All Leagues)</span>" : "");
+    const safeId = encodeURIComponent(m.display_name);
+    return `<div style="padding:9px 13px;cursor:pointer;font-size:12px;color:#b8cee6;
+      border-bottom:1px solid #0d1521;transition:background 0.12s"
+      data-mgr="${safeId}"
+      onmouseenter="this.style.background='#132234'"
+      onmouseleave="this.style.background='transparent'"
+      onmousedown="selectManager(decodeURIComponent(this.dataset.mgr))">
+      ${label}
+    </div>`;
+  }).join("");
+  drop.style.display = "block";
+}
+
+function selectManager(displayName){
+  const m = managers.find(x => x.display_name === displayName);
+  if(!m) return;
+  selectedMgrObj = m;
+  document.getElementById("mgr-select").value = displayName;
+  document.getElementById("mgr-input").value  = displayName;
+  document.getElementById("mgr-drop").style.display = "none";
+
+  // Show selected name badge
+  const badge = document.getElementById("mgr-selected-name");
+  badge.textContent = "✓ " + displayName;
+  badge.style.display = "block";
+
+  // Show mini profile card
+  renderMgrProfileCard(m);
+}
+
+function hideMgrDrop(){
+  const drop = document.getElementById("mgr-drop");
+  if(drop) drop.style.display = "none";
+}
+
+function clearManager(){
+  selectedMgrObj = null;
+  document.getElementById("mgr-select").value = "";
+  document.getElementById("mgr-input").value  = "";
+  const badge = document.getElementById("mgr-selected-name");
+  if(badge) badge.style.display = "none";
+  const card = document.getElementById("mgr-profile-card");
+  if(card) { card.style.display = "none"; card.innerHTML = ""; }
+}
+
+function renderMgrProfileCard(m){
+  const card = document.getElementById("mgr-profile-card");
+  if(!card) return;
+
+  const tl    = m.timeline || "unknown";
+  const tlClr = {
+    "rebuilding":"#60a5fa","likely to build":"#818cf8",
+    "trying to contend":"#f59e0b","contending":"#f97316","unknown":"#475569"
+  }[tl] || "#9ab8d8";
+  const picks  = m.pick_preference != null ? Math.round(m.pick_preference*100)+"%" : "—";
+  const ageP   = m.age_preference != null
+    ? (m.age_preference < -0.3 ? "Prefers youth" : m.age_preference > 0.3 ? "Ok with vets" : "Balanced")
+    : "—";
+  const trades = m.trades ?? 0;
+  const tpy    = m.trades_per_year != null ? m.trades_per_year+"/yr" : "";
+  const isMerged = m.profile_type === "merged";
+
+  // ── Roster needs ──────────────────────────────────────────────────────────
+  const needs = m.roster_needs || {};
+  function needLabel(score){
+    if(score == null) return null;
+    // Thresholds match server.py compute_roster_needs exactly:
+    // Needy (>0.32) and Thin (0.20-0.32) are most urgent — shown as Weak/Thin
+    // Weak (0.10-0.20) is noticeable gap, Solid (0.04-0.10) is minor, Stacked (<=0.04) is elite
+    if(score > 0.32)  return {label:"Weak",   clr:"#ef4444", bg:"rgba(239,68,68,0.12)"};
+    if(score >= 0.20) return {label:"Thin",   clr:"#f59e0b", bg:"rgba(245,158,11,0.12)"};
+    if(score >= 0.10) return {label:"Weak",   clr:"#f97316", bg:"rgba(249,115,22,0.10)"};
+    if(score <= 0.04) return {label:"Stacked",clr:"#22c55e", bg:"rgba(34,197,94,0.12)"};
+    return                   {label:"OK",     clr:"#60a5fa", bg:"rgba(96,165,250,0.10)"};
+  }
+  const positions = ["QB","RB","WR","TE","FLEX","SF"];
+  const needKeys  = {QB:"need_qb",RB:"need_rb",WR:"need_wr",TE:"need_te",FLEX:"need_flex",SF:"need_sflex"};
+  const needsHTML = positions.map(pos => {
+    const score = needs[needKeys[pos]];
+    const nl = needLabel(score);
+    if(!nl) return "";
+    return `<div style="display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;
+      background:${nl.bg};border:1px solid ${nl.clr}33">
+      <span style="font-size:11px;font-weight:700;color:#94a3b8">${pos}</span>
+      <span style="font-size:11px;font-weight:700;color:${nl.clr}">${nl.label}</span>
+    </div>`;
+  }).filter(Boolean).join("");
+
+  // Stub: server.py has no real profile for this manager yet —
+  // no trade history, no roster needs, and no timeline data.
+  const isStub = (m.profile_type === "stub") ||
+    (!m.trades && !needsHTML && tl === "unknown" && !m.win_acceptance?.length);
+
+  // ── Preferred packages ────────────────────────────────────────────────────
+  const winAcc = (m.win_acceptance||[]).slice(0,4);
+  const PATTERN_ICONS = {
+    multi_piece:"📦", clean_single:"💎", "1_round_pick":"🎲",
+    "2_round_pick":"🎲", depth_sweetener:"🔧", position_mix:"🔀",
+    same_pos_stack:"📚"
+  };
+  const winHTML = winAcc.map(wp => {
+    const icon = PATTERN_ICONS[wp.pattern] || "•";
+    const sentEx = (wp.sent_examples||[]).slice(0,2).join(", ");
+    const recvEx = (wp.examples||[]).slice(0,2).join(", ");
+    const exLine = sentEx && recvEx
+      ? `<div style="font-size:11px;color:#4a6a8a;margin-top:2px">gave: ${sentEx} → got: ${recvEx}</div>`
+      : "";
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;
+      border-bottom:1px solid rgba(56,98,168,0.08)">
+      <span style="font-size:14px;flex-shrink:0;margin-top:1px">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:#c8daf0;font-weight:500">${wp.label}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:1px">${wp.n}x (${Math.round(wp.rate*100)}%) · avg +${(wp.avg_delta||0).toLocaleString()} KTC</div>
+        ${exLine}
+      </div>
+    </div>`;
+  }).join("");
+
+  // ── Loss acceptance ───────────────────────────────────────────────────────
+  const lossAcc = (m.loss_acceptance||[]).slice(0,3);
+  const LOSS_ICONS = {consolidation:"💎",pick_sweetener:"🎯",youth_discount:"📈",timeline_fit:"🏆"};
+  const lossHTML = lossAcc.map(lp => {
+    const icon = LOSS_ICONS[lp.pattern] || "•";
+    const exStr = (lp.examples||[]).length
+      ? `<span style="color:#4a6a8a"> · e.g. ${lp.examples.slice(0,2).join(", ")}</span>`
+      : "";
+    return `<div style="display:flex;align-items:center;gap:7px;padding:5px 0;
+      border-bottom:1px solid rgba(56,98,168,0.06)">
+      <span style="font-size:13px">${icon}</span>
+      <div>
+        <span style="font-size:12px;color:#f59e0b;font-weight:500">${lp.label}</span>
+        <span style="font-size:11px;color:#475569"> · ${lp.n}x, ${Math.round(lp.rate*100)}% of below-value trades${exStr}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  // ── Pick pays ─────────────────────────────────────────────────────────────
+  const avgPickVal = m.avg_recv_pick_val;
+  const pickPayHTML = avgPickVal
+    ? `<div style="font-size:11px;color:#475569;margin-top:6px">
+        <span style="color:#4a6a8a">Avg pick received: </span>
+        <span style="color:#93c5fd;font-family:monospace">${avgPickVal.toLocaleString()} KTC</span>
+      </div>`
+    : "";
+
+  card.style.display = "block";
+  card.innerHTML = `
+    <!-- ── HEADER ─────────────────────────────────────────────────── -->
+    <div style="display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(56,98,168,0.15)">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:17px;font-weight:800;color:#e2eaf8">${m.display_name}</span>
+          <span style="font-size:11px;font-weight:700;color:${tlClr};background:${tlClr}18;
+            border:1px solid ${tlClr}33;border-radius:5px;padding:2px 9px;font-family:monospace;
+            text-transform:uppercase;letter-spacing:.05em">${tl}</span>
+          ${m.league ? `<span style="font-size:11px;color:#64748b">${m.league}</span>` : ""}
+        </div>
+        <div style="font-size:12px;color:#64748b;margin-top:4px">
+          ${trades} trades${tpy ? " · "+tpy : ""}${isMerged ? " · "+m.leagues_count+" leagues" : ""}
+        </div>
+      </div>
+      <button onclick="clearManager()" style="background:rgba(255,255,255,0.04);
+        border:1px solid rgba(255,255,255,0.08);border-radius:6px;color:#64748b;
+        font-size:11px;cursor:pointer;padding:4px 10px;font-family:monospace">
+        ✕ clear
+      </button>
+    </div>
+
+    <!-- ── STUB NOTICE (limited profile) ───────────────────────────── -->
+    ${isStub ? `<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);
+      border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px">
+      <span style="font-size:14px;flex-shrink:0;margin-top:1px">⚠️</span>
+      <div style="font-size:12px;color:#94a3b8;line-height:1.6">
+        <span style="color:#fcd34d;font-weight:600">Limited profile</span> —
+        this manager's leagues aren't fully loaded in our system yet.
+        Roster needs and trade patterns will appear once more data is available.
+        Analysis will still run using value and structure signals.
+      </div>
+    </div>` : ""}
+
+    <!-- ── TWO COLUMN LAYOUT ──────────────────────────────────────── -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+      <!-- LEFT: stats + roster needs -->
+      <div>
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div style="background:rgba(255,255,255,0.03);border-radius:7px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#dbeafe;font-family:monospace">${picks}</div>
+            <div style="font-size:10px;color:#4a6a8a;letter-spacing:0.1em;margin-top:2px">PICK PREF</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border-radius:7px;padding:10px;text-align:center">
+            <div style="font-size:15px;font-weight:700;color:#dbeafe">${ageP}</div>
+            <div style="font-size:10px;color:#4a6a8a;letter-spacing:0.1em;margin-top:2px">AGE BIAS</div>
+          </div>
+        </div>
+
+        <!-- Roster Needs -->
+        ${needsHTML ? `<div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#4a6a8a;
+            font-family:monospace;text-transform:uppercase;margin-bottom:7px">Roster Needs</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">${needsHTML}</div>
+          ${pickPayHTML}
+        </div>` : ""}
+      </div>
+
+      <!-- RIGHT: preferred packages + loss acceptance -->
+      <div>
+        ${winHTML ? `<div style="margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#4a6a8a;
+            font-family:monospace;text-transform:uppercase;margin-bottom:6px">
+            Preferred Package (winning deals)
+          </div>
+          ${winHTML}
+        </div>` : ""}
+
+        ${lossHTML ? `<div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#4a6a8a;
+            font-family:monospace;text-transform:uppercase;margin-bottom:6px">
+            Accepts KTC losses for
+          </div>
+          ${lossHTML}
+        </div>` : ""}
+      </div>
+    </div>`;
+}
+
+// ── Sleeper session restore ───────────────────────────────────────────────────
+function restoreSleeperSession(){
+  const u = localStorage.getItem('diq_sleeper_user');
+  if(u){
+    const badge = document.getElementById("analyze-sleeper-badge");
+    const btn   = document.getElementById("analyze-connect-btn");
+    if(badge){ badge.textContent = "✓ @"+u; badge.style.display="inline"; }
+    if(btn)  btn.style.display = "none";
+    // If server already confirmed online, reload managers scoped to this user.
+    // If server check hasn't finished, checkServer() will call loadManagers(u).
+    if(serverOnline) loadManagers(u);
+  } else {
+    showManagerConnectPrompt();
+  }
+}
+
+function showManagerConnectPrompt(){
+  const wrap = document.getElementById("mgr-wrap");
+  if(!wrap) return;
+  wrap.innerHTML = `<div style="padding:9px 13px;border-radius:8px;border:1px solid rgba(56,98,168,0.2);
+    background:rgba(7,20,40,0.6);font-size:12px;color:#64748b;line-height:1.5">
+    <a href="#" onclick="openSleeperConnectFlow();return false;"
+      style="color:#3b82f6;font-weight:600;text-decoration:none">Connect Sleeper</a>
+    &nbsp;for manager-specific analysis
+  </div>`;
+}
+
+function openSleeperConnectFlow(){
+  window.location = 'dynastyiq-vote.html';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+restoreSleeperSession();
+checkServer();
+document.addEventListener("click", e=>{
+  ["give","get"].forEach(side=>{
+    const wrap = document.getElementById(side+"-wrap");
+    const drop = document.getElementById(side+"-drop");
+    if(wrap && !wrap.contains(e.target)) drop.style.display="none";
+  });
+});
+</script>
+<script src="arc-profile.js"></script>
+</body>
+</html>
